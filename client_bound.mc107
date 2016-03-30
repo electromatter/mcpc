@@ -1,7 +1,3 @@
-;(compound <name> <fields>)
-;(enum <name> <basetype> 
-;	<key> <value>...)
-
 (compound status
 (match varint
 (0 (field status string) (emit response))
@@ -18,9 +14,22 @@
 (compound block_change_record (field xz byte) (field y byte) (field block_data varint) (emit))
 (compound explosion_record (field x y z byte) (emit))
 (compound map_icon (field dirtype x z byte) (emit))
+
 (compound entity_property_modifier (field uuid uuid) (field ammount double) (field operation byte) (emit))
 (compound entity_property (field key string) (field value double)
 	(field modifiers (array varint entity_property_modifier)) (emit))
+
+(compound player_property (field key value string) (match bool
+	(0 (emit player_property))
+	(1 (field signature string) (emit signed_player_property)))
+(compound uuid_varint (field key uuid) (field value varint) (emit))
+(compound player_displayname (field key uuid) (match bool
+	(0 (emit no_displayname))
+	(1 (field display string) (emit displayname))))
+(compound player_info (field key uuid) (field name string)
+	(field properties (array varint player_property))
+	(field gamemode ping varint) (field displayname player_displayname)
+	(emit))
 
 (compound play107
 (match varint
@@ -106,7 +115,12 @@
 	(1 (field duration varint) (field entity int) (emit combat_end))
 	(2 (field player varint) (field entity int)
 		(field message string) (emit combat_entity_dead))))
-; (45)
+(45 (match varint
+	(0 (field players (array varint player_info)) (emit player_list_add))
+	(1 (field players (array varint uuid_varint)) (emit player_list_gamemode))
+	(2 (field players (array varint uuid_varint)) (emit player_list_latency))
+	(3 (field players (array varint player_displayname)) (emit player_list_display_name))
+	(4 (field players (array varint uuid)) (emit player_list_remove)))
 (46 (field x y z double) (field yaw pitch float) (field flags byte)
 	(field teleport varint) (emit player_position_and_look))
 (47 (field entity varint) (field pos position) (emit use_bed))
