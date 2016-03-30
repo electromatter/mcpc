@@ -1,18 +1,18 @@
-(handshake
+(protocol handshake
 (match varint
 (0 (field version varint) (field address string) (field port short) (field next varint) (emit handshake))))
 
-(status
+(protocol status
 (match varint
 (0 (emit request))
 (1 (field timestamp long) (emit ping))))
 
-(login
+(protocol login
 (match varint
 (0 (field name string) (emit start))
 (1 (field secret bytes) (field verify bytes) (emit response))))
 
-(play107
+(protocol play107
 (match varint
 (0 (field teleportid varint) (emit teleport_confirm))
 (1 (field text string) (field is_command bool) (match bool

@@ -1,0 +1,14 @@
+(protocol status
+(match varint
+(0 (field status string) (emit response))
+(1 (field timestamp long) (emit pong))))
+
+(protocol login
+(match varint
+(0 (field text string) (emit disconnect))
+(1 (field serverid string) (field pubkey bytes) (field verify bytes) (emit request))
+(2 (field uuid string) (field username string) (emit success))
+(3 (field threshold varint) (emit set_compression))))
+
+(protocol play107)
+
