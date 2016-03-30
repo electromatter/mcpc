@@ -25,7 +25,7 @@
 (6 (field window byte) (field enchantment byte) (emit enchant))
 (7 (field window byte) (field slot short) (field button byte) (field action short) (field mode varint) (field clicked_item slot) (emit click_window))
 (8 (emit close_window))
-(9 (field channel string) (field data raweof) (emit plugin_message))
+(9 (field channel string) (field data (bytes eof)) (emit plugin_message))
 (10 (field target varint) (match varint
 	(0 (field hand varint) (emit interact_entity))
 	(1 (emit attack_entity))
