@@ -35,7 +35,7 @@ the `EOF`.
 
 #### string
 ```
-(string <size>)
+( string <size> )
 ```
 A UTF-8 encoded string.
 
@@ -46,7 +46,7 @@ that prefixes the string.
 
 #### string_utf16
 ```
-(string_utf16 <size>)
+( string_utf16 <size> )
 ```
 A UTF-16 encoded string.
 
@@ -56,7 +56,7 @@ See string's parameterization.
 
 #### bytes
 ```
-(bytes <size>)
+( bytes <size> )
 ```
 A raw byte array.
 
@@ -66,7 +66,7 @@ See string's parameterization.
 
 #### array
 ```
-(array <size> <type>)
+( array <size> <type> )
 ```
 `<size>` - See string's parameterization.
 
@@ -151,7 +151,7 @@ emit rule or a match rule.
 ```
 ( <value> <body> )
       OR
-(default <body> )
+( default <body> )
 ```
 A branch is a variant of a composite type. Composite 
 types are always terminated by emit.
