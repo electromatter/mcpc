@@ -45,21 +45,11 @@
 			typename (state :cur))		; name the type
 		:cur :done :fields :order))))		; cleanup
 
-; constructs a scalar type if it doesn't exitst and verifies it was previously
-; used as a scalar retuns:
-;	(state scalar_typename)
-(defn buildscalar
-	[state typename]
-	(if (contains? state typename)
-		(do (assert ((state typename) :scalar)) (list state typename))
-		(list (assoc state typename {:name typename :scalar true}) typename)))
-
-; constructs a non-trivial type if nessicary and returns:
-;	(state simplified_typename)
-;TODO: non-trivial type
 (defn buildtype
 	[state typename]
-	(list state typename))
+	(if (= (type typename) (type 'symbol))
+		(list state {:name typename})
+		(list state {:name (first typename) :args (rest typename)})))
 
 ; adds a field to the current type
 (defmethod translate 'field
@@ -86,7 +76,7 @@
 	[state expr]
 	(let [[_ & values] expr
 		typename (last values)
-		[state typename] (buildscalar state typename)
+		[state typename] (buildtype state typename)
 		values (butlast values)
 		cur (state :cur)
 		literals (map #(do {:action :literal :value % :type typename}) values)]
@@ -96,18 +86,10 @@
 			:cur (assoc cur
 				:order (concat (cur :order) literals)))))
 
-; builds a scalar type from a typespec returns:
-; (state condition)
-;TODO: allow field references
-(defn buildcondition
-	[state condition]
-	(buildscalar state condition))
-
 ; builds a branch into the current type
 (defmethod translate 'match
 	[state expr]
 	(let [[_ condition & branches] expr
-		[state condition] (buildcondition state condition)
 		cur (state :cur)]
 	(assert cur)					; make sure we are in a composite
 	(assert (not (state :done)))			; match after terminal symbol!
@@ -138,7 +120,4 @@
 			newname {:name newname :fields (state :fields) :order (state :order)}
 			:done true)
 		(assoc state :done true))))
-
-(use 'clojure.pprint)
-(pprint (translate-file (first *command-line-args*)))
 
