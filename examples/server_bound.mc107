@@ -7,8 +7,7 @@
 ; of the ISC license. See the LICENSE file for details.
 
 (compose handshake
-(match varint
-(0 (field version varint) (field address string) (field port short) (field next varint) (emit handshake))))
+(literal 0 varint) (field version varint) (field address string) (field port short) (field next varint) (emit))
 
 (compose status
 (match varint
@@ -27,12 +26,12 @@
 	(0 (emit tab_complete))
 	(1 (field look position) (emit look_tab_complete))))
 (2 (field text string) (emit message))
-(3 (field action varint) (emit status))
+(3 (field action varint) (emit client_status))
 (4 (field locale string) (field view byte) (field chat_mode varint) (field chat_colors bool) (field skin_parts byte) (field main_hand varint) (emit settings))
 (5 (field window byte) (field action short) (field accepted bool) (emit confirm_transaction))
 (6 (field window byte) (field enchantment byte) (emit enchant))
 (7 (field window byte) (field slot short) (field button byte) (field action short) (field mode varint) (field clicked_item slot) (emit click_window))
-(8 (emit close_window))
+(8 (field window byte) (emit close_window))
 (9 (field channel string) (field data (bytes eof)) (emit plugin_message))
 (10 (field target varint) (match varint
 	(0 (field hand varint) (emit interact_entity))

@@ -8,9 +8,14 @@ classic protocol
 license
 wire format documentation
 writing a code generator documentation
+user interface for the compiler
 user manual
-
+pointer mode
+exported symbols
+naming options
+allocation mode
 c code-gen
 python code-gen
 dot code-gen
+ML code-gen
 
