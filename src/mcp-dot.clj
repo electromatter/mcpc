@@ -9,8 +9,21 @@
 (ns mcp-dot
 	(:require mcp))
 
+; WARNING: does not support non-trivial types
+
 ;shapes: elipse (default), box, diamond, ...
 ;nodea [label="derp" shape=box];
 ;nodeb [label="face"];
 ;nodea->nodeb [label="0"];
+
+; returns (nodes, links)
+(defn build-graph
+	[root]
+	(println (root :order)))
+
+(defn build-dot
+	[root]
+	(build-graph root))
+
+(build-dot ((mcp/translate-file (first *command-line-args*)) 'status))
 

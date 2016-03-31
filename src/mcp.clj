@@ -45,11 +45,37 @@
 			typename (state :cur))		; name the type
 		:cur :done :fields :order))))		; cleanup
 
+(defn buildsize
+	[state typename]
+	(cond
+	(= (type typename) (type 'symbol))
+		(list state typename)
+	(integer? typename)
+		(list state typename)
+	))
+
 (defn buildtype
 	[state typename]
 	(if (= (type typename) (type 'symbol))
 		(list state {:name typename})
-		(list state {:name (first typename) :args (rest typename)})))
+		(let [[kw & args] typename]
+		(cond
+;		(= kw 'compose)
+		(= kw 'array)
+			(let [[size elem] args
+				[state size] (buildsize state size)
+				[state elem] (buildtype state elem)]
+			(list state {:name kw :size size :elem elem}))
+		(= kw 'bytes)
+			(let [[size] args
+				[state size] (buildsize state size)]
+			(list state {:name kw :size size}))
+		(= kw 'string)
+			(let [[size] args
+				[state size] (buildsize state size)]
+			(list state {:name kw :size size}))
+		:else
+			(list state {:name kw :args args})))))
 
 ; adds a field to the current type
 (defmethod translate 'field
@@ -114,7 +140,6 @@
 	(assert (or
 		(and (not newname) (cur :name))
 		(and newname (not (cur :name)))))	; check if we need a name
-	(println newname)
 	(assert (not (contains? state newname)))	; ensure distinct name
 	(if newname
 		(assoc state

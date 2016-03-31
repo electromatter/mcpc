@@ -189,7 +189,7 @@
 	(2 (field fade_in stay fade_out int) (emit set_title_times))
 	(3 (emit hide_title))
 	(4 (emit reset_title))))
-(70 (field pos position) (field text (array 4 string)) (emit update_sign))
+(70 (field pos position) (field lines (array 4 string)) (emit update_sign))
 (71 (field sound varint) (field category varint) (field x y z int)
 	(field volume float) (field pitch byte) (emit sound))
 (72 (field header footer string) (emit player_list_footer))

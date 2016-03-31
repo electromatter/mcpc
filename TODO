@@ -1,21 +1,23 @@
-TODO:
+language features:
 aliases
 enumerations
-indexing
-more targets
+array indexing
+
+protocols:
 legacy
 classic protocol
-license
+
+documentation:
 wire format documentation
 writing a code generator documentation
-user interface for the compiler
 user manual
+
+user interface for the compiler:
 pointer mode
 exported symbols
 naming options
 allocation mode
-c code-gen
-python code-gen
-dot code-gen
-ML code-gen
+
+targets:
+C, Python, DOT, ML, Java
 
