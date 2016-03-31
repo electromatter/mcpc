@@ -28,7 +28,7 @@
 	(field modifiers (array varint entity_property_modifier)) (emit))
 
 (compose player_property (field key value string) (match bool
-	(0 (emit player_property))
+	(0 (emit unsigned_player_property))
 	(1 (field signature string) (emit signed_player_property))))
 (compose uuid_varint (field key uuid) (field value varint) (emit))
 (compose player_displayname (field key uuid) (match bool
@@ -52,7 +52,7 @@
 	(field x y z double) (field yaw pitch head_pitch angle)
 	(field v_x v_y v_z short) (field metadata (bytes eof)) (emit spawn_mob))
 (4 (field entity varint) (field entity_uuid uuid) (field title string)
-	(field location position) (direction byte) (emit spawn_painting))
+	(field location position) (field direction byte) (emit spawn_painting))
 (5 (field entity varint) (field player_uuid uuid)
 	(field x y z double) (field yaw pitch angle)
 	(field metadata (bytes eof)) (emit spawn_player))
@@ -89,7 +89,7 @@
 (25 (field name string) (field category varint) (field x y z int)
 	(field volume float) (field pitch byte) (emit named_sound))
 (26 (field reason string) (emit disconnect))
-(27 (field entity int) (emit status byte) (emit entity_status))
+(27 (field entity int) (field status byte) (emit entity_status))
 (28 (field x y z r float) (field records (array int explosion_record)) (field pv_x pv_y pv_z float) (emit explosion))
 (29 (field ch_x ch_z int) (emit unload_chunk))
 (30 (field reason byte) (field value float) (emit change_game_state))

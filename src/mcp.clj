@@ -114,6 +114,7 @@
 	(assert (or
 		(and (not newname) (cur :name))
 		(and newname (not (cur :name)))))	; check if we need a name
+	(println newname)
 	(assert (not (contains? state newname)))	; ensure distinct name
 	(if newname
 		(assoc state
