@@ -1,18 +1,18 @@
-(compound handshake
+(compose handshake
 (match varint
 (0 (field version varint) (field address string) (field port short) (field next varint) (emit handshake))))
 
-(compound status
+(compose status
 (match varint
 (0 (emit request))
 (1 (field timestamp long) (emit ping))))
 
-(compound login
+(compose login
 (match varint
 (0 (field name string) (emit start))
 (1 (field secret bytes) (field verify bytes) (emit response))))
 
-(compound play107
+(compose play107
 (match varint
 (0 (field teleportid varint) (emit teleport_confirm))
 (1 (field text string) (field is_command bool) (match bool

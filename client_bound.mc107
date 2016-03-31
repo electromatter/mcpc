@@ -21,7 +21,7 @@
 
 (compound player_property (field key value string) (match bool
 	(0 (emit player_property))
-	(1 (field signature string) (emit signed_player_property)))
+	(1 (field signature string) (emit signed_player_property))))
 (compound uuid_varint (field key uuid) (field value varint) (emit))
 (compound player_displayname (field key uuid) (match bool
 	(0 (emit no_displayname))
@@ -120,7 +120,7 @@
 	(1 (field players (array varint uuid_varint)) (emit player_list_gamemode))
 	(2 (field players (array varint uuid_varint)) (emit player_list_latency))
 	(3 (field players (array varint player_displayname)) (emit player_list_display_name))
-	(4 (field players (array varint uuid)) (emit player_list_remove)))
+	(4 (field players (array varint uuid)) (emit player_list_remove))))
 (46 (field x y z double) (field yaw pitch float) (field flags byte)
 	(field teleport varint) (emit player_position_and_look))
 (47 (field entity varint) (field pos position) (emit use_bed))
