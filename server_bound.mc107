@@ -1,3 +1,11 @@
+; server_bound.mc107
+;
+; Copyright (c) 2016 Eric Chai <electromatter@gmail.com>
+; All rights reserved.
+;
+; This software may be modified and distributed under the terms
+; of the ISC license. See the LICENSE file for details.
+
 (compose handshake
 (match varint
 (0 (field version varint) (field address string) (field port short) (field next varint) (emit handshake))))

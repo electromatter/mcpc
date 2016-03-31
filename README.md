@@ -8,10 +8,10 @@ motivated by the need to interface with Minecraft.
 **NOTE: this is currently a work-in-progress.**
 
 ## License and Acknowledgements
-I would like to thank [Mojang][3] and Notch for making
+I would like to thank [Mojang][2] and Notch for making
 such an interesting game.
 
-I would also like to thank the [Minecraft Coalition][4]
+I would also like to thank the [Minecraft Coalition][3]
 for providing the documentation making this project possible.
 
 The compiler itself is licensed under the ISC license, see
@@ -181,13 +181,7 @@ parameterized types.
 The third rule allows the definition of arrays of
 composite types.
 
----
-
-This document is licenced under the [Creative Commons Attribution Share Alike][2]
-license.
-
 [1]: http://en.wikipedia.org/wiki/Backus-Naur_Form
-[2]: http://creativecommons.org/licenses/by-sa/3.0/
-[3]: http://mojang.com
-[4]: http://wiki.vg/
+[2]: http://mojang.com
+[3]: http://wiki.vg/
 
