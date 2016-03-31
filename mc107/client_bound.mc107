@@ -6,40 +6,40 @@
 ; This software may be modified and distributed under the terms
 ; of the ISC license. See the LICENSE file for details.
 
-(compound status
+(compose status
 (match varint
 (0 (field status string) (emit response))
 (1 (field timestamp long) (emit pong))))
 
-(compound login
+(compose login
 (match varint
 (0 (field text string) (emit disconnect))
 (1 (field serverid string) (field pubkey bytes) (field verify bytes) (emit request))
 (2 (field uuid string) (field username string) (emit success))
 (3 (field threshold varint) (emit set_compression))))
 
-(compound statistic (field name string) (field value varint) (emit))
-(compound block_change_record (field xz byte) (field y byte) (field block_data varint) (emit))
-(compound explosion_record (field x y z byte) (emit))
-(compound map_icon (field dirtype x z byte) (emit))
+(compose statistic (field name string) (field value varint) (emit))
+(compose block_change_record (field xz byte) (field y byte) (field block_data varint) (emit))
+(compose explosion_record (field x y z byte) (emit))
+(compose map_icon (field dirtype x z byte) (emit))
 
-(compound entity_property_modifier (field uuid uuid) (field ammount double) (field operation byte) (emit))
-(compound entity_property (field key string) (field value double)
+(compose entity_property_modifier (field uuid uuid) (field ammount double) (field operation byte) (emit))
+(compose entity_property (field key string) (field value double)
 	(field modifiers (array varint entity_property_modifier)) (emit))
 
-(compound player_property (field key value string) (match bool
+(compose player_property (field key value string) (match bool
 	(0 (emit player_property))
 	(1 (field signature string) (emit signed_player_property))))
-(compound uuid_varint (field key uuid) (field value varint) (emit))
-(compound player_displayname (field key uuid) (match bool
+(compose uuid_varint (field key uuid) (field value varint) (emit))
+(compose player_displayname (field key uuid) (match bool
 	(0 (emit no_displayname))
 	(1 (field display string) (emit displayname))))
-(compound player_info (field key uuid) (field name string)
+(compose player_info (field key uuid) (field name string)
 	(field properties (array varint player_property))
 	(field gamemode ping varint) (field displayname player_displayname)
 	(emit))
 
-(compound play107
+(compose play107
 (match varint
 (0 (field entity varint) (field object_uuid uuid) (field type byte)
 	(field x y z double) (field pitch yaw angle) (field data int)
@@ -78,7 +78,7 @@
 (17 (field window byte) (field action short) (field accepted bool) (emit confirm_transaction))
 (18 (field window byte) (emit close_window))
 (19 (field window byte) (field type title string) (field num_slots byte)
-	(switch type
+	(match type
 	("EntityHorse" (field entity int) (emit open_horse_window))
 	(default (emit open_window))))
 (20 (field window byte) (field items (array short slot)) (emit window_items))
@@ -104,7 +104,7 @@
 (36 (field damage varint) (field scale byte) (field tracking bool)
 	(field icons (array varint map_icon))
 	(field columns byte)
-	(switch columns
+	(match columns
 	(0 (emit map))
 	(default (field rows x z byte)
 		(field data (array varint byte)) (emit map_data))))
