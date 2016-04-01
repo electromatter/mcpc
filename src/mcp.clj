@@ -126,7 +126,7 @@
 		:cur (assoc cur
 			:order (concat (cur :order)	; add the condition marker and reduce branches
 				`(~{:action :match :on condition}))
-			:branches (apply sorted-map (interleave
+			:branches (apply array-map (interleave
 				(map first branches)
 				(map #(get (reduce translate (assoc state :cur {}) (rest %)) :cur) branches))))
 		:done true)))
