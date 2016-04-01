@@ -106,7 +106,7 @@
 	(def rootname (symbol (second *command-line-args*)))))
 
 (cond
-	(= numargs 1) (pprint (source :roots))
+	(= numargs 1) (do (println "roots:") (pprint (source :roots)))
 	(= numargs 2) (println (build-dot (str rootname) (source rootname)))
 	:else (println "usage: <source filename> <rootname>"))
 
