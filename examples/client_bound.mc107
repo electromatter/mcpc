@@ -97,7 +97,7 @@
 (32 (field ch_x ch_z int) (field biomes bool) (field bitmask varint) (field data bytes) (emit chunk_data))
 (33 (field effect int) (field pos position) (field data int) (field volume bool) (emit effect))
 (34 (field particle int) (field far bool) (field x y z ox oy oz data float)
-	(field data (array int varint) (emit particle)))
+	(field data (array int varint)) (emit particle))
 (35 (field entity int) (field gamemode byte) (field dimension byte)
 	(field difficulty byte) (field max_players byte)
 	(field level_type string) (field reduced_debug bool) (emit join_game))

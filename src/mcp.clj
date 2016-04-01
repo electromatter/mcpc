@@ -16,6 +16,7 @@
 	[& col]
 	(distinct? (apply concat (map keys col))))
 
+; augments the ast and flattens types
 (defmulti translate
 	(fn
 		([expr] :initial)
@@ -60,20 +61,20 @@
 		(list state {:name typename})
 		(let [[kw & args] typename]
 		(cond
-;		(= kw 'compose)
+;		(= kw 'compose) TODO: non-trivial types
 		(= kw 'array)
 			(let [[size elem] args
 				[state size] (buildsize state size)
 				[state elem] (buildtype state elem)]
-			(list state {:name kw :size size :elem elem}))
+			(list state {:name kw :size-type size :elem-type elem}))
 		(= kw 'bytes)
 			(let [[size] args
 				[state size] (buildsize state size)]
-			(list state {:name kw :size size}))
+			(list state {:name kw :size-type size}))
 		(= kw 'string)
 			(let [[size] args
 				[state size] (buildsize state size)]
-			(list state {:name kw :size size}))
+			(list state {:name kw :size-type size}))
 		:else
 			(list state {:name kw :args args})))))
 
@@ -125,7 +126,7 @@
 		:cur (assoc cur
 			:order (concat (cur :order)	; add the condition marker and reduce branches
 				`(~{:action :match :on condition}))
-			:branches (apply hash-map (interleave
+			:branches (apply sorted-map (interleave
 				(map first branches)
 				(map #(get (reduce translate (assoc state :cur {}) (rest %)) :cur) branches))))
 		:done true)))
@@ -143,7 +144,14 @@
 	(assert (not (contains? state newname)))	; ensure distinct name
 	(if newname
 		(assoc state
+			:cur (assoc cur
+				:order (concat (cur :order)
+					`(~{:action :emit :name newname})))
 			newname {:name newname :fields (state :fields) :order (state :order)}
 			:done true)
-		(assoc state :done true))))
+		(assoc state
+			:cur (assoc cur
+				:order (concat (cur :order)
+					`(~{:action :emit :name (cur :name)})))
+			:done true))))
 
