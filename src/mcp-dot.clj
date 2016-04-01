@@ -36,7 +36,7 @@
 		action (first actions)
 		rest_nodes (build-graph root (rest actions) nextid)]
 	(cons {:name (str "literal" id)
-		:label (str "literal\n" (format-type (action :type)) "\n" (action :value))
+		:label (str "literal\\n" (format-type (action :type)) "\\n" (action :value))
 		:links (list {:target ((first rest_nodes) :name)})} rest_nodes)))
 
 ; link to next
@@ -46,7 +46,7 @@
 		action (first actions)
 		rest_nodes (build-graph root (rest actions) nextid)]
 	(cons {:name (str "field" id)
-		:label (str (format-type (action :type)) "\n" (action :name))
+		:label (str (format-type (action :type)) "\\n" (action :name))
 		:links (list {:target ((first rest_nodes) :name)})} rest_nodes)))
 
 ; link to branches
@@ -57,7 +57,8 @@
 		branches (root :branches)
 		branch_rest (map #(build-graph % (% :order) nextid) (vals branches))]
 	(cons {:name (str "match" id)
-		:label (str "match\n" (action :on))
+		:label (str "match\\n" (action :on))
+		:shape "diamond"
 		:links (doall (map #(do {:target ((first %) :name)
 					:label %2}) branch_rest (keys branches)))}
 		(reduce concat branch_rest))))
@@ -67,7 +68,8 @@
 	(let [id (nextid)
 		action (first actions)]
 	(list {:name (str "emit" id)
-		:label (str "emit\n" (action :name))})))
+		:shape "box"
+		:label (str "emit\\n" (action :name))})))
 
 (defn format-options
 	[options]
