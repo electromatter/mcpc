@@ -153,7 +153,7 @@
 		(assert (not (and oldname newname)))
 		(assoc state
 			:cur (assoc (:cur state)
-				:orders (concat (:ordsers (:cur state)) orders))
+				:orders (concat (:orders (:cur state)) orders))
 			:done true
 			:types (assoc (:types state)
 				cname {:name cname
