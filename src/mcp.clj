@@ -24,134 +24,114 @@
 
 (def translate-file (comp translate read-file))
 
+(defrecord State [cur done fields orders types])
+
 ; this sets up the state of the translator
 (defmethod translate :initial
-	[expr]
-	(reduce translate {} expr))			; visit each expr
+	[expr]	; translate each expression with a new state
+	(:types (reduce translate {} expr)))
 
-; the following take state and expr and return the new state
-
-; creates a new composite type
+; Begin
 (defmethod translate 'compose
-	[state expr]
-	(let [[_ typename & fields] expr]
-	(assert (not (contains? state typename)))	; ensure distinct name
-	(assert (not (state :cur)))			; ensure we are root
-	(let [state (assoc state typename :cur)		; reserve the name and visit fields
-		state (reduce translate
-			(assoc state :cur {:name typename})
+	[state [_ cname & fields]]
+	(assert (not (:cur state)))	; ensure we are in the correct state
+	(assert (not (contains? (:types state) cname)))
+	(let [state (reduce translate (assoc state	; translate each field
+				:cur {:name cname}	; reserve the name and create a stub
+				:types (assoc (:types state) cname :cur))
 			fields)]
-	(dissoc (assoc state
-			:roots (cons typename (state :roots))
-			typename (state :cur))		; name the type
-		:cur :done :fields :order))))		; cleanup
-
-(defn buildsize
-	[state typename]
-	(cond
-	(= (type typename) (type 'symbol))
-		(list state typename)
-	(integer? typename)
-		(list state typename)
-	))
+		(assert (not (:cur state)))	; ensure we hit and emit
+		(assert (not (:fields state)))
+		(assert (not (:orders state)))
+		state))
 
 (defn buildtype
-	[state typename]
-	(if (= (type typename) (type 'symbol))
-		(list state {:name typename})
-		(let [[kw & args] typename]
-		(cond
-;		(= kw 'compose) TODO: non-trivial types
-		(= kw 'array)
-			(let [[size elem] args
-				[state size] (buildsize state size)
-				[state elem] (buildtype state elem)]
-			(list state {:name kw :size-type size :elem-type elem}))
-		(= kw 'bytes)
-			(let [[size] args
-				[state size] (buildsize state size)]
-			(list state {:name kw :size-type size}))
-		(= kw 'string)
-			(let [[size] args
-				[state size] (buildsize state size)]
-			(list state {:name kw :size-type size}))
-		:else
-			(list state {:name kw :args args})))))
+	[state typespec]
+	(list state {:name typespec}))
 
-; adds a field to the current type
-(defmethod translate 'field
-	[state expr]
-	(let [[_ & names] expr
-		typename (last names)
-		names (butlast names)
-		[state typename] (buildtype state typename); construct type
-		cur (state :cur)
-		fields (interleave names (repeat typename)); build fields
-		order (map #(do {:action :field :name % :type typename}) (take-nth 2 fields))
-		fields (apply hash-map fields)]
-		(assert cur)				; field without context?
-		(assert (not (state :done)))		; field after terminal!
-		(assert (disjoint? (state :fields) fields))
-		(assoc state
-			:cur (assoc cur
-				:fields (merge (cur :fields) fields)
-				:order (concat (cur :order) order))
-			:fields (merge (state :fields) fields))))
-
-; adds a literal to the type
+; Body
 (defmethod translate 'literal
-	[state expr]
-	(let [[_ & values] expr
-		typename (last values)
-		[state typename] (buildtype state typename)
+	[state [_ & values]]
+	(let [typespec (last values)
 		values (butlast values)
-		cur (state :cur)
-		literals (map #(do {:action :literal :value % :type typename}) values)]
-		(assert cur)				; literal without context?
-		(assert (not (state :done)))		; literal after end?
-		(assoc state
-			:cur (assoc cur
-				:order (concat (cur :order) literals)))))
+		[state typespec] (buildtype state typespec)
+		orders (map #(do {:action :literal :value % :type typespec}) values)
+		cur (:cur state)]
+		(assert cur)
+		(assoc state	; add orders for parsing the literal
+			:cur (assoc cur :orders (concat (:orders cur) orders))
+			:orders (concat (:orders state) orders))))
 
-; builds a branch into the current type
+(defmethod translate 'field
+	[state [_ & names]]
+	(let [typespec (last names)
+		names (butlast names)
+		[state typespec] (buildtype state typespec)
+		orders (map #(do {:action :field :name % :type typespec}) names)
+		fields (apply hash-map (interleave names (repeat typespec)))
+		cur (:cur state)]
+		(assert cur)
+		(assoc state	; add orders for parsing the field
+			:cur (assoc cur :orders (concat (:orders cur) orders))
+			:orders (concat (:orders state) orders)
+			:fields (merge (:fields state) fields))))
+
+(use 'clojure.pprint)
+
+(defn build-branch
+	[[state branches] [value & expr] field]
+	(let [fields (:fields :state)
+		newstate (reduce translate (assoc state
+				:cur {}	; enter branch and add value to field
+				:fields (assoc fields field (assoc (get fields field) :value value)))
+			expr)]
+		(println (:final newstate))
+	)
+	; take defined types
+	; assoc branch
+	(list state branches))
+
+; Terminals
 (defmethod translate 'match
-	[state expr]
-	(let [[_ condition & branches] expr
-		cur (state :cur)]
-	(assert cur)					; make sure we are in a composite
-	(assert (not (state :done)))			; match after terminal symbol!
-	(assert (distinct? (map first branches)))	; ensure distinct branches
-	(assoc state
-		; append match
-		:cur (assoc cur
-			:order (concat (cur :order)	; add the condition marker and reduce branches
-				`(~{:action :match :on condition}))
-			:branches (apply array-map (interleave
-				(map first branches)
-				(map #(get (reduce translate (assoc state :cur {}) (rest %)) :cur) branches))))
-		:done true)))
+	[state [_ field & branches]]
+	(assert (:cur state))
+	(if (contains? (:fields state) field)
+		(let [cur (:cur state)	; build branches
+			[state branches] (reduce #(build-branch %1 %2 field) (list state nil) branches)
+			orders `({:action :match :field ~field :branches ~branches})
+			final (assoc cur :orders (concat (:orders cur) orders))]
+		(println cur)
+			(assoc state	; terminate cur
+				:cur nil
+				:fields nil
+				:orders nil
+				:final final
+				:types (if (:name cur)	; if it was a root, we need to update the type
+						(assoc (:types state) (:name cur) final)
+						(:types state))))
+		; matching on an anon field; create the anon field.
+		(let [fieldname (symbol ((:newname state) "_match"))]
+			(translate (translate state (list 'field fieldname field))
+				(cons 'match (cons fieldname branches))))))
 
-; names a new terminal type
 (defmethod translate 'emit
-	[state expr]
-	(let [[_ newname] expr
-		cur (state :cur)]
-	(assert cur)					; make sure we are in a composite
-	(assert (not (state :done)))			; emit after terminal!
-	(assert (or
-		(and (not newname) (cur :name))
-		(and newname (not (cur :name)))))	; check if we need a name
-	(assert (not (contains? state newname)))	; ensure distinct name
-	(if newname
-		(assoc state
-			:cur (assoc cur
-				:order (concat (cur :order)
-					`(~{:action :emit :name newname})))
-			newname {:name newname :fields (state :fields) :order (state :order)}
-			:done true)
-		(assoc state
-			:cur (assoc cur
-				:order (concat (cur :order)
-					`(~{:action :emit :name (cur :name)})))
-			:done true))))
+	[state [_ newname]]
+	(let [oldname (:name (:cur state))
+		cname (or newname oldname)
+		cur (:cur state)
+		orders `({:action :emit :name ~cname})]
+		(assert (not (and newname oldname)))
+		(assert cname)	; check name is valid and that we are in a valid state
+		(assert (= (get (:types state) cname :cur) :cur))
+		(assert cur)
+		(assoc state	; clean up state and emit a type
+			:cur nil
+			:fields nil
+			:orders nil
+			:final (assoc cur :orders (concat (:orders cur) orders))
+			:types (assoc (:types state)
+				cname {
+					:name cname
+					:fields (:fields state)
+					:orders (concat (:orders state) orders)}))))
 
