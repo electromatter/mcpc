@@ -57,7 +57,7 @@
 		branches (action :branches)	; TODO: sort branches in some human frendly way
 		branch_rest (map #(build-graph % (% :orders) nextid) (vals branches))]
 	(cons {:name (str "match" id)
-		:label (str "match\\n" (action :on))
+		:label (str "match\\n" (action :field))
 		:shape "diamond"
 		:links (doall (map #(do {:target ((first %) :name)
 					:label %2}) branch_rest (keys branches)))}
