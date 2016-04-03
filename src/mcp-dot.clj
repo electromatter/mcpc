@@ -56,7 +56,6 @@
 		action (first actions)
 		branches (action :branches)	; TODO: sort branches in some human frendly way
 		branch_rest (map #(build-graph % (% :orders) nextid) (vals branches))]
-		(println (keys branches))
 	(cons {:name (str "match" id)
 		:label (str "match\\n" (action :on))
 		:shape "diamond"

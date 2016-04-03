@@ -35,9 +35,8 @@
 
 (defn gencode
 	([source]
-	(let [roots (select-keys source (source :roots))]
 		(str "import mcp_base\n\n"
-			(reduce #(str %1 "\n" %2) (map gencode source roots)))))
+			(reduce #(str %1 "\n" %2) (map gencode source roots)))
 	([source [_ root]]
 		(gentypecode {:source source
 			:name (root :name)
