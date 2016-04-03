@@ -22,7 +22,7 @@
 (defmethod build-graph :initial
 	[root]
 	(let [idatom (atom 0)]
-		(build-graph root (root :order) (fn [] (swap! idatom inc)))))
+		(build-graph root (root :orders) (fn [] (swap! idatom inc)))))
 
 (defn format-type [typespec]
 	(cond
@@ -54,8 +54,9 @@
 	[root actions nextid]
 	(let [id (nextid)
 		action (first actions)
-		branches (root :branches)
-		branch_rest (map #(build-graph % (% :order) nextid) (vals branches))]
+		branches (action :branches)	; TODO: sort branches in some human frendly way
+		branch_rest (map #(build-graph % (% :orders) nextid) (vals branches))]
+		(println (keys branches))
 	(cons {:name (str "match" id)
 		:label (str "match\\n" (action :on))
 		:shape "diamond"
@@ -105,8 +106,12 @@
 (if (>= numargs 2) (do
 	(def rootname (symbol (second *command-line-args*)))))
 
+(defn is-match-root?
+	[[typename typedef]]
+	(= (:action (last (:orders typedef))) :match))
+
 (cond
-	(= numargs 1) (do (println "roots:") (pprint (source :roots)))
+	(= numargs 1) (do (println "roots:") (pprint (keys (filter is-match-root? source))))
 	(= numargs 2) (println (build-dot (str rootname) (source rootname)))
 	:else (println "usage: <source filename> <rootname>"))
 

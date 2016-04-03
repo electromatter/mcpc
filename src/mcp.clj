@@ -122,6 +122,7 @@
 									field (assoc (get oldfields field) :value value))))
 						fields)]
 					(assert (:done newstate))
+					(assert (not (contains? branches value)))
 					`(~(assoc state :types (:types newstate))
 						~(assoc branches value (:cur newstate)))))
 				`(~state ~{}) branches)
