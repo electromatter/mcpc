@@ -135,6 +135,7 @@
 					(assoc (:types state) (:name cur)
 						{:name (:name cur)
 						:fields (:fields state)
+						:union true
 						:orders (concat (:orders state) orders)})
 					(:types state))))
 		; matching on an anon field; create the anon field.
