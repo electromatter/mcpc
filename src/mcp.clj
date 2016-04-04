@@ -8,6 +8,16 @@
 
 (ns mcp)
 
+(defn flatten-indent
+        [& arg]
+        (apply concat (map (fn [line]
+                        (if (or (string? line) (not (seq? line)))
+                                (list (str line))
+                                (map #(str "\t" %) (apply flatten-indent (seq line)))))
+                 arg)))
+
+(def indent (comp (partial reduce #(str %1 "\n" %2)) flatten-indent))
+
 (defn read-file [filename]
 	(read-string (str \( (slurp filename) \))))
 
