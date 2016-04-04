@@ -29,6 +29,11 @@
 
 (def translate-file (comp translate read-file))
 
+(defn augment-file
+	[with filename]
+	(reduce #(assoc %1 (first %2) (with (second %2)))
+		nil (translate-file filename)))
+
 (defn newcounter
 	[]
 	(let [x (atom 0)]
@@ -92,21 +97,17 @@
 	[state [_ & values]]
 	(let [typespec (last values)
 		values (butlast values)
-		[state typespec] (buildtype state typespec)
-		orders (map #(do {:action :literal :value % :type typespec}) values)
-		cur (:cur state)]
-		(assert cur)		; ensure we are in the correct state
-		(assert not (:done state))
-		(assoc state	; add orders for parsing the literal
-			:cur (assoc cur :orders (concat (:orders cur) orders))
-			:orders (concat (:orders state) orders))))
+		fields (reduce #(assoc %1 ((:counter state) "_literal") {:value %2}) nil values)
+		state (translate state (concat '(field) (keys fields) `(~typespec)))]
+		(assoc state	; set the value of literals
+			:fields (merge-with merge (:fields state) fields))))
 
 (defmethod translate 'field
 	[state [_ & names]]
 	(let [typespec (last names)
 		names (butlast names)
 		[state typespec] (buildtype state typespec)
-		orders (map #(do {:action :field :name % :type typespec}) names)
+		orders (map #(do {:action :field :field %}) names)
 		fields (apply hash-map (interleave names (repeat typespec)))
 		cur (:cur state)]
 		(assert cur)		; ensure we are in the correct state
