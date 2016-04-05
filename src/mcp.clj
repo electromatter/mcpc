@@ -6,6 +6,8 @@
 ; This software may be modified and distributed under the terms
 ; of the ISC license. See the LICENSE file for details.
 
+;TODO: sanitize names
+
 (ns mcp)
 
 (defn flatten-indent
@@ -21,6 +23,30 @@
 (defn read-file [filename]
 	(read-string (str \( (slurp filename) \))))
 
+(defn newcounter
+	[]
+	(let [x (atom 0)]
+		(fn
+			([] (swap! x inc))
+			([text] (str text (swap! x inc))))))
+
+(defn sorted-map-invert
+	[coll]
+		(reduce (fn [c [k v]] (assoc c v k)) (sorted-map) coll))
+
+; flattnes the depenancy tree and gives an arbitrary order
+; to the sequence of definitions
+(defn order
+	([source typename] (-> (order source (newcounter) {} typename) sorted-map-invert vals))
+	([source counter deps typename]
+		(let [cont (partial order source counter)
+			typedef (get source typename)
+			deps (reduce cont deps (:depends typedef))
+			deps (reduce cont deps (:variants typedef))]
+			(if (contains? deps typename)
+				deps
+				(assoc deps typename (counter))))))
+
 ; augments the ast and flattens types
 (defmulti translate
 	(fn
@@ -29,30 +55,32 @@
 
 (def translate-file (comp translate read-file))
 
-(defn augment-file
-	[with filename]
-	(reduce #(assoc %1 (first %2) (with (second %2)))
-		nil (translate-file filename)))
-
-(defn newcounter
-	[]
-	(let [x (atom 0)]
-		(fn [text] (str text (swap! x inc)))))
-
 (defrecord State [cur done fields orders types counter])
 
 (declare buildtype)
 
 (defn buildarraytype
-	([state elem]
+	([state typename elem]
 		(let [[state elem] (buildtype state elem)]
 		`(~state ~{:name 'array :elem elem})))
-	([state size elem]
+	([state typename size elem]
 		(let [[state size] (if (integer? size) (list state size) (buildtype state size))
 			[state elem] (buildtype state elem)]
 		`(~state ~{:name 'array :size size :elem elem}))))
 
-(def basetypes {'array {:name 'array :builtin true :build buildarraytype}})
+(defn buildstrtype
+	([state typename]
+		`(~state ~{:name typename}))
+	([state typename size]
+		(let [[state size] (if (integer? size) (list state size) (buildtype state size))]
+		`(~state ~{:name 'array :size size}))))
+
+(def basetypes {'array {:name 'array :builtin true :build buildarraytype}
+		'string {:name 'string :builtin true :build buildstrtype}
+		'string_utf16 {:name 'string_utf16 :builtin true :build buildstrtype}
+		'bytes {:name 'bytes :builtin true :build buildstrtype}})
+
+;;;;; ADD DEPS
 
 ; this sets up the state of the translator
 (defmethod translate :initial
@@ -74,6 +102,8 @@
 			:cur nil
 			:done nil
 			:fields nil
+			:depends nil
+			:variants nil
 			:orders nil)))
 
 (defn buildtype
@@ -81,11 +111,13 @@
 	(let [types (:types state)
 		[typename & args] (if (= (type typespec) (type 'symbol))
 					(list typespec)
-					typespec)]
+					typespec)
+		state (assoc state
+			:depends (conj (get state :depends #{}) typename))]
 		(if (contains? types typename)
 			(let [typerec (get types typename)]
 				(if (contains? typerec :build)
-					(apply (:build typerec) (cons state args))
+					(apply (:build typerec) (cons state (cons typename args)))
 					(list state (if (seq args)
 						{:name typename :args args}
 						{:name typename}))))
@@ -99,6 +131,7 @@
 		values (butlast values)
 		fields (reduce #(assoc %1 ((:counter state) "_literal") {:value %2}) nil values)
 		state (translate state (concat '(field) (keys fields) `(~typespec)))]
+		(assert (>= (count values) 1))
 		(assoc state	; set the value of literals
 			:fields (merge-with merge (:fields state) fields))))
 
@@ -112,6 +145,7 @@
 		cur (:cur state)]
 		(assert cur)		; ensure we are in the correct state
 		(assert (not (:done state)))
+		(assert (>= (count fields) 1))
 		(assoc state	; add orders for parsing the field
 			:cur (assoc cur :orders (concat (:orders cur) orders))
 			:orders (concat (:orders state) orders)
@@ -122,6 +156,7 @@
 	[state [_ field & branches]]
 	(assert (:cur state))
 	(assert not (:done state))
+	(assert (>= (count branches) 1))
 	(if (contains? (:fields state) field)
 		(let [oldfields (:fields state)
 			values (map first branches)
@@ -129,13 +164,14 @@
 					(let [newstate (reduce translate (assoc state
 							:cur {}	; enter a new context for the branch
 							:fields (if (= value 'default)
-								oldfields		; default match is not a constant value
+								(assoc oldfields	; default match is not a constant value
+									field (assoc (get oldfields field) :exclude (filter (partial not= 'default) values)))
 								(assoc oldfields	; add value to field that was matched on
 									field (assoc (get oldfields field) :value value))))
 						fields)]
 					(assert (:done newstate))
 					(assert (not (contains? branches value)))
-					`(~(assoc state :types (:types newstate))
+					`(~(merge state (select-keys newstate [:types :depends :variants]))
 						~(assoc branches value (assoc (:cur newstate) :fields (:fields newstate))))))
 				`(~state ~{}) branches)
 			; this hack preserves order, this could be improved
@@ -146,9 +182,14 @@
 			(assoc state	; we reached the end of the current type
 				:cur (assoc cur :orders (concat (:orders cur) orders))
 				:done true
+				:variants (if (:name cur)
+					#{}
+					(:variants state))
 				:types (if (:name cur)	; if we were a root, finalize type
 					(assoc (:types state) (:name cur)
 						{:name (:name cur)
+						:depends (:depends state)
+						:variants (:variants state)
 						:fields (:fields state)
 						:union true
 						:orders (concat (:orders state) orders)})
@@ -171,8 +212,13 @@
 			:cur (assoc (:cur state)
 				:orders (concat (:orders (:cur state)) orders))
 			:done true
+			:variants
+				(if (not= cname oldname)
+					(conj (get state :variants #{}) cname)
+					(:variants state))
 			:types (assoc (:types state)
 				cname {:name cname
+					:depends (:depends state)
 					:fields (:fields state)
 					:orders (concat (:orders state) orders)}))))
 

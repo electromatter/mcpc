@@ -10,52 +10,32 @@
 	(:use clojure.pprint)
 	(:require mcp))
 
-;BASIC PROTOCOL
-; check use
-; generate class
-; generate parser
-; generate generator
-; dependancies (including variants, including builtins, only first order)
-; variants
+(defprotocol py-type
+	; generates a field template
+	(make-field [x])
+	; generates definition
+	(apply-class [x])
+	; returns true if it is an integer type
+	(integer-type? [x])
+	(dependancies [x]))
 
-(def inttype {:integer true
-	:checkuse (fn [field] true)
-	:makeclass (fn [field] (list))
-	:makeparse (fn [field] (list))
-	:makegen (fn [field] (list))
-	:depends (list)
-	:variants (list)
-	})
-(def simpletype {})
-(def strtype {:string true})
-(def arraytype {})
+(defprotocol py-field
+	; generates code for parsing/generating
+	(apply-parser [x])
+	(apply-generator [x]))
 
-(def builtin-types {
-	'bool inttype 'byte inttype 'short inttype 'int inttype 'long inttype
-	'varint inttype 'varlong inttype
-	'float simpletype 'double simpletype 'uuid simpletype 'angle simpletype
-	'position simpletype 'slot simpletype 'nbt simpletype
-	'bytes_eof simpletype
-	'string strtype 'string_utf16 strtype 'bytes strtype
-	'array arraytype})
+;(def builtin-types {
+;	'bool :int 'byte :int 'short :int 'int :int 'long :int
+;	'varint :int 'varlong :int
+;	'float :simple 'double :simple 'uuid :simple 'angle :simple
+;	'position :simple 'slot :simple 'nbt :simple 'bytes_eof :simple
+;	'string :str 'string_utf16 :str 'bytes :str
+;	'array :array})
 
-(defn build-type
-	[typedef]
-	(merge typedef (cond
-		; augment a builtin type
-		(:builtin typedef) (do
-			(assert (contains? builtin-types (:name typedef)))
-			(get builtin-types (:name typedef)))
-		; augment a union type
-		(:union typedef) (do
-			{:potato true})
-		; augment a terminal type
-		:else (do
-			{:not-potato true}))))
+(def source (mcp/translate-file (first *command-line-args*)))
+(def rootname (symbol (second *command-line-args*)))
 
-; augment the source
-(pprint (mcp/augment-file build-type (first *command-line-args*)))
-
-; invoke the type checker
-; invoke the code generators
+; flatten dependency tree
+(pprint (mcp/order source rootname))
+; then build types in order
 

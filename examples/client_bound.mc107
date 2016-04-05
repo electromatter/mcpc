@@ -151,7 +151,7 @@
 (54 (field entity varint) (emit camera))
 (55 (field slot byte) (emit held_item_change))
 (56 (field position byte) (field score_name string) (emit display_scoreboard))
-(57 (field entity_metadata)
+(57 (field entity varint)
 	(field metadata bytes_eof) (emit entity_metadata))
 (58 (field attached holding int) (emit attach_entity))
 (59 (field entity varint) (field vx vy vz short) (emit entity_velocity))
