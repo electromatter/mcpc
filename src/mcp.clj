@@ -102,7 +102,7 @@
 			:cur nil
 			:done nil
 			:fields nil
-			:depends nil
+			:depends #{}
 			:variants nil
 			:orders nil)))
 
