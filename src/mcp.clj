@@ -107,7 +107,7 @@
 	(let [typespec (last names)
 		names (butlast names)
 		[state typespec] (buildtype state typespec)
-		orders (map #(do {:action :field :name % :type typespec}) names)
+		orders (map #(do {:action :field :name %}) names)
 		fields (reduce #(assoc %1 %2 {:name %2 :type typespec}) nil names)
 		cur (:cur state)]
 		(assert cur)		; ensure we are in the correct state
@@ -136,7 +136,7 @@
 					(assert (:done newstate))
 					(assert (not (contains? branches value)))
 					`(~(assoc state :types (:types newstate))
-						~(assoc branches value (:cur newstate)))))
+						~(assoc branches value (assoc (:cur newstate) :fields (:fields newstate))))))
 				`(~state ~{}) branches)
 			; this hack preserves order, this could be improved
 			branches (apply array-map (interleave values (map (partial get branches) values)))

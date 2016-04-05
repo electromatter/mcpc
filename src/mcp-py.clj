@@ -18,10 +18,17 @@
 ; dependancies (including variants, including builtins, only first order)
 ; variants
 
-(def inttype nil)
-(def simpletype nil)
-(def strtype nil)
-(def arraytype nil)
+(def inttype {:integer true
+	:checkuse (fn [field] true)
+	:makeclass (fn [field] (list))
+	:makeparse (fn [field] (list))
+	:makegen (fn [field] (list))
+	:depends (list)
+	:variants (list)
+	})
+(def simpletype {})
+(def strtype {:string true})
+(def arraytype {})
 
 (def builtin-types {
 	'bool inttype 'byte inttype 'short inttype 'int inttype 'long inttype
@@ -44,7 +51,7 @@
 			{:potato true})
 		; augment a terminal type
 		:else (do
-			{:nonpotato true}))))
+			{:not-potato true}))))
 
 ; augment the source
 (pprint (mcp/augment-file build-type (first *command-line-args*)))

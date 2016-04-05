@@ -35,9 +35,9 @@
 	(let [id (nextid)
 		action (first actions)
 		rest_nodes (build-graph root (rest actions) nextid)
-		value (:value (get (:fields root) (:name action)))]
+		field (get (:fields root) (:name action))]
 	(cons {:name (str "field" id)
-		:label (str (format-type (:type action)) "\\n" (:name action) (if value "\n") value)
+		:label (str (format-type (:type field)) "\\n" (:name field) (if (contains? field :value) "\n") (:value field))
 		:links (list {:target ((first rest_nodes) :name)})} rest_nodes)))
 
 ; link to branches
