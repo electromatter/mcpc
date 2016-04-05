@@ -107,8 +107,8 @@
 	(let [typespec (last names)
 		names (butlast names)
 		[state typespec] (buildtype state typespec)
-		orders (map #(do {:action :field :field %}) names)
-		fields (apply hash-map (interleave names (repeat typespec)))
+		orders (map #(do {:action :field :name %}) names)
+		fields (reduce #(assoc %1 %2 {:name %1 :type typespec}) nil names)
 		cur (:cur state)]
 		(assert cur)		; ensure we are in the correct state
 		(assert (not (:done state)))
@@ -124,6 +124,7 @@
 	(assert not (:done state))
 	(if (contains? (:fields state) field)
 		(let [oldfields (:fields state)
+			values (map first branches)
 			[state branches] (reduce (fn [[state branches] [value & fields]]	; translate each branch
 					(let [newstate (reduce translate (assoc state
 							:cur {}	; enter a new context for the branch
@@ -137,6 +138,8 @@
 					`(~(assoc state :types (:types newstate))
 						~(assoc branches value (:cur newstate)))))
 				`(~state ~{}) branches)
+			; this hack preserves order, this could be improved
+			branches (apply array-map (interleave values (map (partial get branches) values)))
 			cur (:cur state)
 			orders `({:action :match :field ~field :branches ~branches})]
 			(assoc state	; we reached the end of the current type
