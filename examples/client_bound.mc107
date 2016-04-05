@@ -120,7 +120,7 @@
 (43 (field flags byte) (field fly_speed fov float) (emit player_abilities))
 (44 (match varint
 	(0 (emit combat_enter))
-	(1 (field duration varint) (field entity int) (emit combat_end))
+	(1 (field duration varint) (field entity int) (emit combat_leave))
 	(2 (field player varint) (field entity int)
 		(field message string) (emit combat_entity_dead))))
 (45 (match varint

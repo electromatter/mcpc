@@ -107,8 +107,8 @@
 	(let [typespec (last names)
 		names (butlast names)
 		[state typespec] (buildtype state typespec)
-		orders (map #(do {:action :field :name %}) names)
-		fields (reduce #(assoc %1 %2 {:name %1 :type typespec}) nil names)
+		orders (map #(do {:action :field :name % :type typespec}) names)
+		fields (reduce #(assoc %1 %2 {:name %2 :type typespec}) nil names)
 		cur (:cur state)]
 		(assert cur)		; ensure we are in the correct state
 		(assert (not (:done state)))
@@ -142,6 +142,7 @@
 			branches (apply array-map (interleave values (map (partial get branches) values)))
 			cur (:cur state)
 			orders `({:action :match :field ~field :branches ~branches})]
+			(assert not (and (contains? branches 'default) (.startsWith field "_")))
 			(assoc state	; we reached the end of the current type
 				:cur (assoc cur :orders (concat (:orders cur) orders))
 				:done true

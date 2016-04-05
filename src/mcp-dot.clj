@@ -26,27 +26,18 @@
 
 (defn format-type [typespec]
 	(cond
-	(= (typespec :name) 'array) (str "array" (format-type :elem-type))
+	(= (typespec :name) 'array) (str "array\\n" (format-type (:elem typespec)))
 	:else (str (typespec :name))))
-
-; link to next
-(defmethod build-graph :literal
-	[root actions nextid]
-	(let [id (nextid)
-		action (first actions)
-		rest_nodes (build-graph root (rest actions) nextid)]
-	(cons {:name (str "literal" id)
-		:label (str "literal\\n" (format-type (action :type)) "\\n" (action :value))
-		:links (list {:target ((first rest_nodes) :name)})} rest_nodes)))
 
 ; link to next
 (defmethod build-graph :field
 	[root actions nextid]
 	(let [id (nextid)
 		action (first actions)
-		rest_nodes (build-graph root (rest actions) nextid)]
+		rest_nodes (build-graph root (rest actions) nextid)
+		value (:value (get (:fields root) (:name action)))]
 	(cons {:name (str "field" id)
-		:label (str (format-type (action :type)) "\\n" (action :name))
+		:label (str (format-type (:type action)) "\\n" (:name action) (if value "\n") value)
 		:links (list {:target ((first rest_nodes) :name)})} rest_nodes)))
 
 ; link to branches
@@ -54,7 +45,7 @@
 	[root actions nextid]
 	(let [id (nextid)
 		action (first actions)
-		branches (action :branches)	; TODO: sort branches in some human frendly way
+		branches (action :branches)
 		branch_rest (map #(build-graph % (% :orders) nextid) (vals branches))]
 	(cons {:name (str "match" id)
 		:label (str "match\\n" (action :field))
