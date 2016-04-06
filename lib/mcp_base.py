@@ -1,3 +1,6 @@
+class NoMatchError(Exception):
+	pass
+
 class Base:
 	@classmethod
 	def decode(cls, ptr):

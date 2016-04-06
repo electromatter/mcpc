@@ -10,32 +10,174 @@
 	(:use clojure.pprint)
 	(:require mcp))
 
-(defprotocol py-type
-	; generates a field template
-	(make-field [x])
-	; generates definition
-	(apply-class [x])
-	; returns true if it is an integer type
-	(integer-type? [x])
-	(dependancies [x]))
+(def builtin-types {
+	'bool :int 'byte :int 'short :int 'int :int 'long :int
+	'varint :int 'varlong :int
+	'float :simple 'double :simple 'uuid :simple 'angle :simple
+	'position :simple 'slot :simple 'nbt :simple 'bytes_eof :simple
+	'string :str 'string_utf16 :str 'bytes :str
+	'array :array})
 
-(defprotocol py-field
-	; generates code for parsing/generating
-	(apply-parser [x])
-	(apply-generator [x]))
+(def not-contains? (comp not contains?))
 
-;(def builtin-types {
-;	'bool :int 'byte :int 'short :int 'int :int 'long :int
-;	'varint :int 'varlong :int
-;	'float :simple 'double :simple 'uuid :simple 'angle :simple
-;	'position :simple 'slot :simple 'nbt :simple 'bytes_eof :simple
-;	'string :str 'string_utf16 :str 'bytes :str
-;	'array :array})
+(defn non-const-fields
+	[{orders :orders fields :fields}]
+	(filter identity (map (fn [{action :action field :name}]
+		(if (and (= action :field) (not-contains? (get fields field) :value))
+			field)) orders)))
+
+(defn gen-init
+	[source typedef]
+	(let [fields (non-const-fields typedef)]
+	(list (str "def __init__(" (reduce #(str %1 ", " %2) "_self" fields) "):")
+		(list "return"))))
+
+
+(defmulti gen-value (fn [source field value] (get builtin-types (-> field :type :name))))
+(defmulti gen-encode-field (fn [source field] (get builtin-types (-> field :type :name))))
+(defmulti gen-decode-field (fn [source field] (get builtin-types (-> field :type :name))))
+
+;generate constant values
+(defmethod gen-value :int
+	[source field value]
+	(assert (integer? value) (str (:name field) " of integer type must have integer value"))
+	(str value))
+
+(defmethod gen-value :str
+	[source field value]
+	(assert (string? value) (str (:name field) " of string type must have string value"))
+	(str "\"" value "\""));FIXME ESCAPE STRING!!!!
+
+(defmethod gen-value :default
+	[source field value]
+	(println (-> field :type :name (get builtin-types)))
+	(assert false (str (-> field :type :name) " cannot have a primitive value")))
+
+;generate encode
+(defmethod gen-encode-field :simple
+	[source field]
+	(assert (not (or (:value field) (:exclude field))) (str (-> field :type :name) " must be primitive"))
+	(list (str "_raw += _mcp.encode_" (-> field :type :name) "(_self." (:name field) ")")))
+
+(defmethod gen-encode-field :int
+	[source field]
+	;TODO values, exclude
+	(list (str "_raw += _mcp.encode_" (-> field :type :name) "(_self." (:name field) ")")))
+
+(defmethod gen-encode-field :str
+	[source field]
+	;TODO values, exclude
+	(list "string!"))
+
+(defmethod gen-encode-field :array
+	[source field]
+	;TODO array
+	(list "array!"))
+
+(defmethod gen-encode-field :default
+	[source field]
+	(assert (not (or (:value field) (:exclude field))) (str (-> field :type :name) " must be primitive"))
+	(list (str "_raw += _self." (:name field) ".encode()")))
+
+;generate decode
+(defmethod gen-decode-field :simple
+	[source field]
+	(assert (not (or (:value field) (:exclude field))) (str (-> field :type :name) " must be primitive"))
+	(list (str (:name field) ", _off = _mcp.decode_" (-> field :type :name) "(_raw, _off)")))
+
+(defmethod gen-decode-field :int
+	[source field]
+	;TODO values, exclude
+	(list (str (:name field) ", _off = _mcp.decode_" (-> field :type :name) "(_raw, _off)")))
+
+(defmethod gen-decode-field :str
+	[source field]
+	;TODO values, exclude
+	(list "string!!"))
+
+(defmethod gen-decode-field :array
+	[source field]
+	;TODO array
+	(list "array!!"))
+
+(defmethod gen-decode-field :default
+	[source field]
+	(assert (not (or (:value field) (:exclude field))) (str (-> field :type :name) " must be primitive"))
+	(list (str (:name field) ", _off = " (-> field :type :name) ".decode(_raw, _off)")))
+
+(defn gen-encode
+	[source typedef]
+	(list "def encode(_self):"
+		(list "_raw = bytes()")
+		(mapcat (fn [order] (cond
+			(= (:action order) :field) (gen-encode-field source (get (:fields typedef) (:name order)))
+			(= (:action order) :emit) (list "return _raw")
+			:else (assert false (str "unknown action: " (:action order)))))
+			(:orders typedef))))
+
+(declare gen-decode-branch)
+
+(defn gen-decode-match
+	[source typedef match]
+	(let [branches (dissoc (:branches match) 'default)
+		default (-> match :branches (get 'default))
+		field (get (:fields typedef) (:field match))]
+	(assert (> (count branches) 0) "match with no branches?")
+	(concat
+		(list "if false:"	;so we can just use elif
+			(list "pass"))
+		(mapcat (fn [[value branch]]
+			(list (str"elif " (:name field) " == " (gen-value source field value) ":")
+				(gen-decode-branch source branch (:orders branch))))
+		branches)
+		(list "else:"
+			(if default
+				(gen-decode-branch source default (:orders default))
+				(list "raise _mcp.NoMatchError()"))))))
+
+(defn gen-decode-branch
+	[source typedef branch]
+	(let [fields (non-const-fields typedef)]
+	(mapcat (fn [order] (cond
+		(= (:action order) :field) (gen-decode-field source (get (:fields typedef) (:name order)))
+		(= (:action order) :match) (gen-decode-match source typedef order)
+		(= (:action order) :emit) (list (str "return " (:name order) "(" (reduce #(apply str (interpose ", " %&)) fields) ")"))
+		:else (assert false (str "unknown action: " (:action order)))))
+		branch)))
+
+(defn gen-decode
+	[source typedef]
+	(list	"@staticmethod"
+		"def decode(_raw, _off=0):"
+		(gen-decode-branch source typedef (:orders typedef))))
+
+(defn gen-code
+	[source typename]
+	(let [typedef (get source typename)]
+	(assert typedef)
+	(cond
+	(:builtin typedef) (do
+		(assert (contains? builtin-types typename))
+		(list))
+	(:union typedef) (do
+		(list
+			(str "class " typename "(_mcp.Base):")
+			(gen-decode source typedef)
+			""))
+	:else (do
+		(list
+			(str "class " typename "(_mcp.Base):")
+			(gen-init source typedef)
+			(gen-encode source typedef)
+			(gen-decode source typedef)
+			"")))))
 
 (def source (mcp/translate-file (first *command-line-args*)))
 (def rootname (symbol (second *command-line-args*)))
+(def order (mcp/order source rootname))
 
-; flatten dependency tree
-(pprint (mcp/order source rootname))
-; then build types in order
+; build source
+(println "import mcp_base as _mcp")
+(println)
+(println (apply mcp/indent (mapcat (partial gen-code source) order)))
 
