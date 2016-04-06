@@ -30,6 +30,10 @@
 			([] (swap! x inc))
 			([text] (str text (swap! x inc))))))
 
+(defn disjoint?
+	[& maps]
+	(apply distinct? (mapcat keys maps)))
+
 (defn sorted-map-invert
 	[coll]
 		(reduce (fn [c [k v]] (assoc c v k)) (sorted-map) coll))
@@ -146,6 +150,7 @@
 		(assert cur)		; ensure we are in the correct state
 		(assert (not (:done state)))
 		(assert (>= (count fields) 1))
+		(assert (disjoint? (:fields state) fields) (str "ensure: unique field names" (keys (:fields state)) (keys fields)))
 		(assoc state	; add orders for parsing the field
 			:cur (assoc cur :orders (concat (:orders cur) orders))
 			:orders (concat (:orders state) orders)

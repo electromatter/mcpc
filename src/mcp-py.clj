@@ -80,14 +80,25 @@
 
 (defmethod gen-encode-field :str
 	[source field]
-	;TODO size, values, exclude
-	(list (str "string!" field)))
+	(let [size (get (-> field :type) :size {:name 'varint})
+		size (if (integer? size)
+			(assert false "fixed length strings unsupported")
+			(do
+				(assert (= (get builtin-types (:name size)) :int) "size must be integer type")
+				(str "_mcp.encode_" (:name size))))]
+	(if (:value field)
+		(list (str "_raw += _mcp.encode_" (-> field :type :name) "(" (gen-value source field (:value field)) ", " size ")"))
+		(concat
+			(if (:exclude field)
+				(list (str "if _self." (:name field) " in " (gen-value-vec source field (:exclude field)) ":")
+					(list "raise _mcp.NoMatchError()")))
+			(list (str "_raw += _mcp.encode_" (-> field :type :name) "(_self." (:name field) ", " size ")"))))))
 
 (defmethod gen-encode-field :array
 	[source field]
 	(assert (not (or (:value field) (:exclude field))) (str (-> field :type :name) " must be primitive"))
 	;TODO array
-	(list "array!"))
+	(list "#array!"))
 
 (defmethod gen-encode-field :default
 	[source field]
@@ -113,14 +124,26 @@
 
 (defmethod gen-decode-field :str
 	[source field]
-	;TODO size, values, exclude
-	(list "string!!"))
+	(let [size (get (-> field :type) :size {:name 'varint})
+		size (if (integer? size)
+			(assert false "fixed length strings unsupported")
+			(do
+				(assert (= (get builtin-types (:name size)) :int) "size must be integer type")
+				(str "_mcp.decode_" (:name size))))]
+	(concat
+		(list (str (:name field) ", _off = _mcp.decode_" (-> field :type :name) "(_raw, _off, " size ")"))
+		(if (:value field)
+			(list (str "if " (:name field) " != " (gen-value source field (:value field)) ":")
+				(list "raise _mcp.NoMatchError()")))
+		(if (:exclude field)
+			(list (str "if " (:name field) " in " (gen-value-vec source field (:exclude field)) ":")
+				(list "raise _mcp.NoMatchError()"))))))
 
 (defmethod gen-decode-field :array
 	[source field]
 	(assert (not (or (:value field) (:exclude field))) (str (-> field :type :name) " must be primitive"))
 	;TODO array
-	(list "array!!"))
+	(list "#array!!" (:name field)))
 
 (defmethod gen-decode-field :default
 	[source field]
