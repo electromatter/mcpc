@@ -17,7 +17,7 @@ class Base:
 	def encode(self):
 		raise NotImplementedError('tried to encode non-terminal type')
 
-class Slot
+class Slot:
 	def __init__(self, itemid, count=1, damage=0, nbt=None):
 		self.itemid = itemid
 		self.count = count
@@ -136,10 +136,16 @@ def decode_string(raw, off=0, size=decode_varint):
 	return raw.decode('utf-8'), off
 
 def decode_string_utf16(raw, off=0, size=decode_varint):
-	print("warning using untested string_utf16")#FIXME
-	raw, off = decode_bytes(raw, off, size)
-	return raw.decode('utf-16be'), off
+	raise NotImplementedError()
 
 def decode_array(raw, off=0, size=decode_varint, elem=None):
-	raise NotImplementedError()
+	val = []
+	if not isinstance(size, int):
+		size, off = size(raw, off)
+	if elem is None:
+		raise ValueError('elem must be a decode closure')
+	for _ in range(size):
+		x, off = elem(raw, off)
+		val.append(x)
+	return val, off
 

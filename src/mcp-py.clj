@@ -38,10 +38,11 @@
 		(map #(str "_self." % " = " %) fields)
 		(list "return"))))
 
-
 (defmulti gen-value (fn [source field value] (get builtin-types (-> field :type :name))))
 (defmulti gen-encode-field (fn [source field] (get builtin-types (-> field :type :name))))
 (defmulti gen-decode-field (fn [source field] (get builtin-types (-> field :type :name))))
+(defmulti gen-encode-elem (fn [source elem] (get builtin-types (:name elem))))
+(defmulti gen-decode-elem (fn [source elem] (get builtin-types (:name elem))))
 
 ;generate constant values
 (defmethod gen-value :int
@@ -63,6 +64,17 @@
 	[source field values]
 	(str "[" (apply str (interpose "," (map (partial gen-value source field) values))) "]"))
 
+(defn gen-size
+	[template size]
+	(if (not size)
+		(template 'varint);default size type
+		(if (integer? size)
+			size;constant size
+			(do
+				(println size)
+				(assert (= (get builtin-types (:name size)) :int) "size must be integer type")
+				(template (:name size))))));integer type
+
 ;generate encode
 (defmethod gen-encode-field :simple
 	[source field]
@@ -81,12 +93,7 @@
 
 (defmethod gen-encode-field :str
 	[source field]
-	(let [size (get (-> field :type) :size {:name 'varint})
-		size (if (integer? size)
-			size;(assert false "fixed length strings unsupported")
-			(do
-				(assert (= (get builtin-types (:name size)) :int) "size must be integer type")
-				(str "_mcp.encode_" (:name size))))]
+	(let [size (gen-size #(str "_mcp.encode_" %) (-> field :type :size))]
 	(if (:value field)
 		(list (str "_raw += _mcp.encode_" (-> field :type :name) "(" (gen-value source field (:value field)) ", " size ")"))
 		(concat
@@ -95,25 +102,34 @@
 					(list "raise _mcp.NoMatchError()")))
 			(list (str "_raw += _mcp.encode_" (-> field :type :name) "(_self." (:name field) ", " size ")"))))))
 
-(defn gen-encode-elem
-	[source elem]
-	;integer, simple
-	;union, variant
-	;string
-	;array
-	"!!ELEM!!")
-
 (defmethod gen-encode-field :array
 	[source field]
 	(assert (not (or (:value field) (:exclude field))) (str (-> field :type :name) " must be primitive"))
-	(let [size (get (-> field :type) :size {:name 'varint})
-		size (if (integer? size)
-			size
-			(do
-				(assert (= (get builtin-types (:name size)) :int) "size must be integer type")
-				(str "_mcp.decode_" (:name size))))
-		elem (-> field :type :elem (gen-encode-elem source))]
+	(let [size (gen-size #(str "_mcp.encode_" %) (-> field :type :size))
+		elem (gen-encode-elem source (-> field :type :elem))]
 	(list (str "_raw += _mcp.encode_array(_self." (:name field) ", " size ", " elem ")"))))
+
+;encode an element
+(defmethod gen-encode-elem :int
+	[source elem]
+	(str "_mcp.encode_" (:name elem)))
+
+(defmethod gen-encode-elem :simple
+	[source elem]
+	(str "_mcp.encode_" (:name elem)))
+
+(defmethod gen-encode-elem :str
+	[source elem]
+	(let [size (gen-size #(str "_mcp.encode_" %) (:size elem))]
+	(str "(lambda _val: _mcp.encode_" (:name elem) "(_val, " size "))")))
+
+(defmethod gen-encode-elem :array
+	[source elem]
+	(assert false "nested arrays unsupported"))
+
+(defmethod gen-encode-elem :default
+	[source elem]
+	(str "(lambda _val: _val.encode())"))
 
 (defmethod gen-encode-field :default
 	[source field]
@@ -139,12 +155,7 @@
 
 (defmethod gen-decode-field :str
 	[source field]
-	(let [size (get (-> field :type) :size {:name 'varint})
-		size (if (integer? size)
-			size;(assert false "fixed length strings unsupported")
-			(do
-				(assert (= (get builtin-types (:name size)) :int) "size must be integer type")
-				(str "_mcp.decode_" (:name size))))]
+	(let [size (gen-size #(str "_mcp.decode_" %) (-> field :type :size))]
 	(concat
 		(list (str (:name field) ", _off = _mcp.decode_" (-> field :type :name) "(_raw, _off, " size ")"))
 		(if (:value field)
@@ -154,25 +165,34 @@
 			(list (str "if " (:name field) " in " (gen-value-vec source field (:exclude field)) ":")
 				(list "raise _mcp.NoMatchError()"))))))
 
-(defn gen-decode-elem
-	[source elem]
-	;integer, simple
-	;union, variant
-	;string
-	;array
-	"!!ELEM!!")
-
 (defmethod gen-decode-field :array
 	[source field]
 	(assert (not (or (:value field) (:exclude field))) (str (-> field :type :name) " must be primitive"))
-	(let [size (get (-> field :type) :size {:name 'varint})
-		size (if (integer? size)
-			size
-			(do
-				(assert (= (get builtin-types (:name size)) :int) "size must be integer type")
-				(str "_mcp.decode_" (:name size))))
-		elem (-> field :type :elem (gen-decode-elem source))]
+	(let [size (gen-size #(str "_mcp.decode_" %) (-> field :type :size))
+		elem (gen-decode-elem source (-> field :type :elem))]
 	(list (str (:name field) ", _off = _mcp.decode_array(_raw, _off, " size ", " elem ")"))))
+
+;decode an element
+(defmethod gen-decode-elem :int
+	[source elem]
+	(str "_mcp.decode_" (:name elem)))
+
+(defmethod gen-decode-elem :simple
+	[source elem]
+	(str "_mcp.decode_" (:name elem)))
+
+(defmethod gen-decode-elem :str
+	[source elem]
+	(let [size (gen-size #(str "_mcp.decode_" %) (:size elem))]
+	(str "(lambda _raw, _off: _mcp.decode_" (:name elem) "(_raw, _off, " size "))")))
+
+(defmethod gen-decode-elem :array
+	[source elem]
+	(assert false "nested arrays unsupported"))
+
+(defmethod gen-decode-elem :default
+	[source elem]
+	(str (:name elem) ".decode"))
 
 (defmethod gen-decode-field :default
 	[source field]
