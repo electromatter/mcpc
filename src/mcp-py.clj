@@ -57,7 +57,6 @@
 
 (defmethod gen-value :default
 	[source field value]
-	(println (-> field :type :name (get builtin-types)))
 	(assert false (str (-> field :type :name) " cannot have a primitive value")))
 
 (defn gen-value-vec
@@ -71,7 +70,6 @@
 		(if (integer? size)
 			size;constant size
 			(do
-				(println size)
 				(assert (= (get builtin-types (:name size)) :int) "size must be integer type")
 				(template (:name size))))));integer type
 

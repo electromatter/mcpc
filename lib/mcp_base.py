@@ -1,4 +1,5 @@
 import struct
+import uuid
 
 class NoMatchError(Exception):
 	pass
@@ -39,6 +40,7 @@ def fix_sign(x, bits):
 		x -= 1 << bits
 	return x
 
+# the interface here is: decode_*type*(raw, off, *args*) -> (val, new_off)
 def decode_raw(raw, off, n):
 	if n < 0:
 		raise ValueError('n negitive?')
@@ -53,7 +55,7 @@ def decode_bool(raw, off=0):
 
 def decode_byte(raw, off=0):
 	raw, off = decode_raw(raw, off, 1)
-	return raw[0], off
+	return struct.unpack('!b', raw), off
 
 def decode_short(raw, off=0):
 	raw, off = decode_raw(raw, off, 2)
@@ -148,4 +150,84 @@ def decode_array(raw, off=0, size=decode_varint, elem=None):
 		x, off = elem(raw, off)
 		val.append(x)
 	return val, off
+
+#TODO: nicer value checking
+# the interface is: encode_type(val, *args*) -> bytes
+def encode_byte(val):
+	return struct.pack('!b', val)
+
+def encode_bool(val):
+	return encode_byte(1 if val else 0)
+
+def encode_short(val):
+	return struct.pack('!h', val)
+
+def encode_int(val):
+	return struct.pack('!i', val)
+
+def encode_long(val):
+	return struct.pack('!l', val)
+
+def encode_varint(val):
+	raise NotImplementedError()
+
+def encode_varlong(val):
+	raise NotImplementedError()
+
+def encode_float(val):
+	return struct.pack('!f', val)
+
+def encode_double(val):
+	return struct.pack('!d', val)
+
+def encode_uuid(val):
+	if isinstance(val, str):
+		val = uuid.UUID(val)
+	elif isinstance(val, uuid.UUID):
+		pass
+	else:
+		raise ValueError('val must a uuid')
+	return val.bytes
+
+def encode_angle(val):
+	return encode_byte(val)
+
+def encode_position(val):
+	x, y, z = val
+	#TODO bounds check
+	return encode_long((x & 0x3ffffff)<< | (y & 0xfff) | (z & 0x3ffffff))
+
+def encode_nbt(val):
+	raise NotImplementedError()
+
+def encode_slot(val):
+	if val is None:
+		return encode_short(-1)
+
+	if val.itemid < 0:
+		raise ValueError('invalid itemid')
+
+	raw = encode_short(val.itemid)
+	raw += encode_short(val.count)
+	raw += encode_short(val.damage)
+	return raw + encode_nbt(val.nbt)
+
+def encode_bytes_eof(val):
+	return bytes(val)
+
+def encode_bytes(val, size=encode_varint):
+	val = bytes(val)
+	return size(len(val)) + val
+
+def encode_string(val, size=encode_varint):
+	return encode_bytes(val.encode('utf-8'), size)
+
+def encode_string_utf16(val, size=encode_varint):
+	raise NotImplementedError()
+
+def encode_array(val, size=encode_varint, elem=None):
+	raw = size(len(val))
+	for x in val:
+		raw += elem(x)
+	return raw
 
