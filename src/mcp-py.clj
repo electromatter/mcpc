@@ -6,6 +6,10 @@
 ; This software may be modified and distributed under the terms
 ; of the ISC license. See the LICENSE file for details.
 
+;TODO: rewrite in better style (with macros and formatters
+;TODO: better value escaping
+;TODO: nested arrays)
+
 (ns mcp-py
 	(:use clojure.pprint)
 	(:require mcp))
@@ -30,6 +34,7 @@
 	[source typedef]
 	(let [fields (non-const-fields typedef)]
 	(list (str "def __init__(" (reduce #(str %1 ", " %2) "_self" fields) "):")
+		(map #(str "_self." % " = " %) fields)
 		(list "return"))))
 
 
@@ -53,6 +58,10 @@
 	(println (-> field :type :name (get builtin-types)))
 	(assert false (str (-> field :type :name) " cannot have a primitive value")))
 
+(defn gen-value-vec
+	[source field values]
+	(str "[" (apply str (interpose "," (map (partial gen-value source field) values))) "]"))
+
 ;generate encode
 (defmethod gen-encode-field :simple
 	[source field]
@@ -61,16 +70,22 @@
 
 (defmethod gen-encode-field :int
 	[source field]
-	;TODO values, exclude
-	(list (str "_raw += _mcp.encode_" (-> field :type :name) "(_self." (:name field) ")")))
+	(if (:value field)
+		(list (str "_raw += _mcp.encode_" (-> field :type :name) "(" (gen-value source field (:value field)) ")"))
+		(concat
+			(if (:exclude field)
+				(list (str "if " (:name field) " in " (gen-value-vec source field (:exclude field)) ":")
+					(list "raise _mcp.NoMatchError()")))
+			(list (str "_raw += _mcp.encode_" (-> field :type :name) "(_self." (:name field) ")")))))
 
 (defmethod gen-encode-field :str
 	[source field]
-	;TODO values, exclude
-	(list "string!"))
+	;TODO size, values, exclude
+	(list (str "string!" field)))
 
 (defmethod gen-encode-field :array
 	[source field]
+	(assert (not (or (:value field) (:exclude field))) (str (-> field :type :name) " must be primitive"))
 	;TODO array
 	(list "array!"))
 
@@ -87,16 +102,23 @@
 
 (defmethod gen-decode-field :int
 	[source field]
-	;TODO values, exclude
-	(list (str (:name field) ", _off = _mcp.decode_" (-> field :type :name) "(_raw, _off)")))
+	(concat
+		(list (str (:name field) ", _off = _mcp.decode_" (-> field :type :name) "(_raw, _off)"))
+		(if (:value field)
+			(list (str "if " (:name field) " != " (gen-value source field (:value field)) ":")
+				(list "raise _mcp.NoMatchError()"))
+		(if (:exclude field)
+			(list (str "if " (:name field) " in " (gen-value-vec source field (:exclude field)) ":")
+				(list "raise _mcp.NoMatchError()"))))))
 
 (defmethod gen-decode-field :str
 	[source field]
-	;TODO values, exclude
+	;TODO size, values, exclude
 	(list "string!!"))
 
 (defmethod gen-decode-field :array
 	[source field]
+	(assert (not (or (:value field) (:exclude field))) (str (-> field :type :name) " must be primitive"))
 	;TODO array
 	(list "array!!"))
 
