@@ -6,9 +6,10 @@
 ; This software may be modified and distributed under the terms
 ; of the ISC license. See the LICENSE file for details.
 
-;TODO: rewrite in better style (with macros and formatters
+;TODO: rewrite in better style (with macros and formatters)
 ;TODO: better value escaping
-;TODO: nested arrays)
+;TODO: nested arrays
+;TODO: optimize: group fixed size fields together and use struct
 
 (ns mcp-py
 	(:use clojure.pprint)
@@ -82,7 +83,7 @@
 	[source field]
 	(let [size (get (-> field :type) :size {:name 'varint})
 		size (if (integer? size)
-			(assert false "fixed length strings unsupported")
+			size;(assert false "fixed length strings unsupported")
 			(do
 				(assert (= (get builtin-types (:name size)) :int) "size must be integer type")
 				(str "_mcp.encode_" (:name size))))]
@@ -94,11 +95,25 @@
 					(list "raise _mcp.NoMatchError()")))
 			(list (str "_raw += _mcp.encode_" (-> field :type :name) "(_self." (:name field) ", " size ")"))))))
 
+(defn gen-encode-elem
+	[source elem]
+	;integer, simple
+	;union, variant
+	;string
+	;array
+	"!!ELEM!!")
+
 (defmethod gen-encode-field :array
 	[source field]
 	(assert (not (or (:value field) (:exclude field))) (str (-> field :type :name) " must be primitive"))
-	;TODO array
-	(list "#array!"))
+	(let [size (get (-> field :type) :size {:name 'varint})
+		size (if (integer? size)
+			size
+			(do
+				(assert (= (get builtin-types (:name size)) :int) "size must be integer type")
+				(str "_mcp.decode_" (:name size))))
+		elem (-> field :type :elem (gen-encode-elem source))]
+	(list (str "_raw += _mcp.encode_array(_self." (:name field) ", " size ", " elem ")"))))
 
 (defmethod gen-encode-field :default
 	[source field]
@@ -126,7 +141,7 @@
 	[source field]
 	(let [size (get (-> field :type) :size {:name 'varint})
 		size (if (integer? size)
-			(assert false "fixed length strings unsupported")
+			size;(assert false "fixed length strings unsupported")
 			(do
 				(assert (= (get builtin-types (:name size)) :int) "size must be integer type")
 				(str "_mcp.decode_" (:name size))))]
@@ -139,11 +154,25 @@
 			(list (str "if " (:name field) " in " (gen-value-vec source field (:exclude field)) ":")
 				(list "raise _mcp.NoMatchError()"))))))
 
+(defn gen-decode-elem
+	[source elem]
+	;integer, simple
+	;union, variant
+	;string
+	;array
+	"!!ELEM!!")
+
 (defmethod gen-decode-field :array
 	[source field]
 	(assert (not (or (:value field) (:exclude field))) (str (-> field :type :name) " must be primitive"))
-	;TODO array
-	(list "#array!!" (:name field)))
+	(let [size (get (-> field :type) :size {:name 'varint})
+		size (if (integer? size)
+			size
+			(do
+				(assert (= (get builtin-types (:name size)) :int) "size must be integer type")
+				(str "_mcp.decode_" (:name size))))
+		elem (-> field :type :elem (gen-decode-elem source))]
+	(list (str (:name field) ", _off = _mcp.decode_array(_raw, _off, " size ", " elem ")"))))
 
 (defmethod gen-decode-field :default
 	[source field]
