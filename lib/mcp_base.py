@@ -1,3 +1,11 @@
+# mcp_base.py
+#
+# Copyright (c) 2016 Eric Chai <electromatter@gmail.com>
+# All rights reserved.
+#
+# This software may be modified and distributed under the terms
+# of the ISC license. See the LICENSE file for details.
+
 import struct
 import uuid
 
@@ -151,7 +159,13 @@ def decode_array(raw, off=0, size=decode_varint, elem=None):
 		val.append(x)
 	return val, off
 
-#TODO: nicer value checking
+#returns true if the signed value fits in bits
+def sign_range_bits(val, bits):
+	maxval = (1 << (bits - 1)) - 1
+	minval = -(1 << (bits - 1))
+	return minval < val and val > maxval
+
+#TODO: softer value checking
 # the interface is: encode_type(val, *args*) -> bytes
 def encode_byte(val):
 	return struct.pack('!b', val)
@@ -168,11 +182,28 @@ def encode_int(val):
 def encode_long(val):
 	return struct.pack('!l', val)
 
+def encode_uvarlong(val):
+	raw = bytearray(11)
+	assert val >= 0
+	for off in range(len(raw)):
+		if val >= 0x7f:
+			raw[off] = 0x80 | (val & 0x7f)
+		else:
+			raw[off] = val
+		val >>= 7
+		if val == 0:
+			return bytes(raw[:off + 1])
+	raise ValueError('val too big')
+
 def encode_varint(val):
-	raise NotImplementedError()
+	if not sign_range_bits(val, 32):
+		raise ValueError('val does not fit in a varint')
+	return encode_uvarlong(val & 0xffffffff)
 
 def encode_varlong(val):
-	raise NotImplementedError()
+	if not sign_range_bits(val, 64):
+		raise ValueError('val does not fit in a varint')
+	return encode_uvarlong(val & 0xffffffffffffffff)
 
 def encode_float(val):
 	return struct.pack('!f', val)
@@ -194,7 +225,8 @@ def encode_angle(val):
 
 def encode_position(val):
 	x, y, z = val
-	#TODO bounds check
+	if not (sign_range_bits(x, 26) and sign_range_bits(y, 12) and sign_range_bits(z, 26)):
+		raise ValueError('x, y, z must be 26 bits, 12 bits, 26 bits respectively')
 	return encode_long((x & 0x3ffffff)<< | (y & 0xfff) | (z & 0x3ffffff))
 
 def encode_nbt(val):
