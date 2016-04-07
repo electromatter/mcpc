@@ -41,15 +41,16 @@
 ; flattnes the depenancy tree and gives an arbitrary order
 ; to the sequence of definitions
 (defn order
-	([source & names] (-> (reduce (partial order source) {} names) sorted-map-invert vals))
-	([source counter deps typename]
-		(let [cont (partial order source counter)
-			typedef (get source typename)
+	[source & names]
+	(let [counter (newcounter)]
+	(-> (reduce (fn cont [deps typename]
+		(let [typedef (get source typename)
 			deps (reduce cont deps (:depends typedef))
 			deps (reduce cont deps (:variants typedef))]
 			(if (contains? deps typename)
 				deps
-				(assoc deps typename (counter))))))
+				(assoc deps typename (counter))))
+		) {} names) sorted-map-invert vals)))
 
 ; augments the ast and flattens types
 (defmulti translate
