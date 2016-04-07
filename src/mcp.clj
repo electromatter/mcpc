@@ -41,7 +41,7 @@
 ; flattnes the depenancy tree and gives an arbitrary order
 ; to the sequence of definitions
 (defn order
-	([source typename] (-> (order source (newcounter) {} typename) sorted-map-invert vals))
+	([source & names] (-> (reduce (partial order source) {} names) sorted-map-invert vals))
 	([source counter deps typename]
 		(let [cont (partial order source counter)
 			typedef (get source typename)
