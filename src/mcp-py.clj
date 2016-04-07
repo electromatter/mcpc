@@ -52,13 +52,14 @@
 			:else (assert false (str "unknown action: " (:action order)))))
 			(:orders typedef))
 		"def __repr__(_self):"
+			(list
 			(if (seq fields)
 				(str "return '" (:name typedef) "("
-					(interpose ", " (map #(str % "=%r") fields))
+					(apply str (interpose ", " (map #(str % "=%r") fields)))
 					")' % ("
-					(interpose ", " (map #(str "_self." %) fields))
+					(apply str (interpose ", " (map #(str "_self." %) fields)))
 					")")
-				(str "return '" (:name typedef) "()'")))))
+				(str "return '" (:name typedef) "()'"))))))
 
 (defmulti gen-value (fn [source field value] (get builtin-types (-> field :type :name))))
 (defmulti gen-encode-field (fn [source field] (get builtin-types (-> field :type :name))))
