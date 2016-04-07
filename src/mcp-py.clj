@@ -278,13 +278,18 @@
 			(gen-decode source typedef)
 			"")))))
 
-(assert (> (count *command-line-args*) 1) "usage: <source filename> <roots>...")
+(def numargs (count *command-line-args*))
 
-(def source (mcp/translate-file (first *command-line-args*)))
-(def orders (apply mcp/order source (map symbol (rest *command-line-args*))))
+(if (> numargs 0)
+	(def source (mcp/translate-file (first *command-line-args*))))
 
-; build source
-(println "import mcp_base as _mcp")
-(println)
-(println (apply mcp/indent (mapcat (partial gen-code source) orders)))
+(if (> numargs 1)
+	(def orders (apply mcp/order source (map symbol (rest *command-line-args*)))))
+
+(cond
+	(= numargs 0) (println "usage: <source filename> <roots>...")
+	(= numargs 1) (do "roots: " (pprint (keys (filter (comp mcp/is-union? second) source))))
+	:else (apply mcp/indent "import mcp_base as _mcp"
+				""
+				(mapcat (partial gen-code source) orders)))
 

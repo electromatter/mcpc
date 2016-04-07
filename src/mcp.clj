@@ -52,6 +52,10 @@
 				(assoc deps typename (counter)))))
 		{} names) sorted-map-invert vals)))
 
+(defn is-union?
+	([source typename] (is-union? (get source typename)))
+	([typedef] (= (:action (last (:orders typedef))) :match)))
+
 ; augments the ast and flattens types
 (defmulti translate
 	(fn

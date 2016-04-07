@@ -96,12 +96,8 @@
 (if (>= numargs 2) (do
 	(def rootname (symbol (second *command-line-args*)))))
 
-(defn is-match-root?
-	[[typename typedef]]
-	(= (:action (last (:orders typedef))) :match))
-
 (cond
-	(= numargs 1) (do (println "roots:") (pprint (keys (filter is-match-root? source))))
+	(= numargs 1) (do (println "roots:") (pprint (keys (filter (comp mcp/is-union? second) source))))
 	(= numargs 2) (println (build-dot (str rootname) (source rootname)))
 	:else (println "usage: <source filename> <rootname>"))
 
