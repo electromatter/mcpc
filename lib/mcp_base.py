@@ -59,9 +59,9 @@ class Slot:
 
 def fix_sign(x, bits):
 	if x >= (1 << bits):
-		raise ValueError('Too large')
+		raise ValueError('too large: %r' % x)
 	if x < 0:
-		raise ValueError('negitive?')
+		raise ValueError('negitive: %r' % x)
 	if x & (1 << (bits - 1)):
 		x -= 1 << bits
 	return x
@@ -69,7 +69,7 @@ def fix_sign(x, bits):
 # the interface here is: decode_*type*(raw, off, *args*) -> (val, new_off)
 def decode_raw(raw, off, n):
 	if n < 0:
-		raise ValueError('n negitive?')
+		raise ValueError('negitive size: %r' % n)
 	if len(raw) < off + n:
 		raise NotEnoughData()
 	return raw[off:off+n], off+n
@@ -179,7 +179,7 @@ def decode_array(raw, off=0, size=decode_varint, elem=None):
 def sign_range_bits(val, bits):
 	maxval = (1 << (bits - 1)) - 1
 	minval = -(1 << (bits - 1))
-	return minval < val and val > maxval
+	return minval < val and val < maxval
 
 #TODO: softer value checking
 # the interface is: encode_type(val, *args*) -> bytes
@@ -209,16 +209,16 @@ def encode_uvarlong(val):
 		val >>= 7
 		if val == 0:
 			return bytes(raw[:off + 1])
-	raise ValueError('val too big')
+	raise ValueError('val too big: %r' % val)
 
 def encode_varint(val):
 	if not sign_range_bits(val, 32):
-		raise ValueError('val does not fit in a varint')
+		raise ValueError('val does not fit in a varint %r' % val)
 	return encode_uvarlong(val & 0xffffffff)
 
 def encode_varlong(val):
 	if not sign_range_bits(val, 64):
-		raise ValueError('val does not fit in a varint')
+		raise ValueError('val does not fit in a varint %r' % val)
 	return encode_uvarlong(val & 0xffffffffffffffff)
 
 def encode_float(val):
