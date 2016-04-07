@@ -278,12 +278,13 @@
 			(gen-decode source typedef)
 			"")))))
 
+(assert (> (count *command-line-args*) 1) "usage: <source filename> <roots>...")
+
 (def source (mcp/translate-file (first *command-line-args*)))
-(def rootname (symbol (second *command-line-args*)))
-(def order (mcp/order source rootname))
+(def orders (map symbol (rest *command-line-args*)))
 
 ; build source
 (println "import mcp_base as _mcp")
 (println)
-(println (apply mcp/indent (mapcat (partial gen-code source) order)))
+(println (apply mcp/indent (mapcat (partial gen-code source) orders)))
 
