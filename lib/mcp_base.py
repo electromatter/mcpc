@@ -8,6 +8,8 @@
 
 import struct
 import uuid
+import nbt
+import io
 
 class NoMatchError(Exception):
 	pass
@@ -32,6 +34,22 @@ class Slot:
 		self.count = count
 		self.damage = damage
 		self.nbt = nbt
+	def encode(self):
+		if self.itemid < 0:
+			return encode_short(-1)
+		raw = encode_byte(self.itemid)
+		raw += encode_short(self.count)
+		raw += encode_short(self.damage)
+		return raw + encode_nbt(self.nbt)
+	@staticmethod
+	def decode(raw, off):
+		itemid, off = decode_short(raw, off)
+		if itemid < 0:
+			return None, off
+		count, off = decode_byte(raw, off)
+		damage, off = decode_short(raw, off)
+		nbt, off = decode_nbt(raw, off)
+		return Slot(itemid, count, damage, nbt), off
 
 #Types:
 #int - bool byte short int long varint varlong
@@ -120,16 +138,14 @@ def decode_position(raw, off=0):
 	return (x, y, z), off
 	
 def decode_nbt(raw, off=0):
-	raise NotImplementedError()
+	raw = memoryview(raw)[off:]
+	if raw[0] == 0:
+		return None, off + 1
+	f = io.BytesIO(raw)
+	return nbt.nbt.TAG_Compound(buffer=f), off + f.tell()
 
 def decode_slot(raw, off=0):
-	itemid, off = decode_short(raw, off)
-	if itemid < 0:
-		return None, off
-	count, off = decode_short(raw, off)
-	damage, off = decode_short(raw, off)
-	nbt, off = decode_nbt(raw, off)
-	return Slot(itemid, count, damage, nbt), off
+	return Slot.decode(raw, off)
 
 def decode_bytes_eof(raw, off=0):
 	if len(raw) < off:
@@ -230,19 +246,16 @@ def encode_position(val):
 	return encode_long((x & 0x3ffffff)<< | (y & 0xfff) | (z & 0x3ffffff))
 
 def encode_nbt(val):
-	raise NotImplementedError()
+	if val is None:
+		b'\x00'
+	f = io.BytesIO()
+	val.write_file(buffer=f)
+	return f.getvalue()
 
 def encode_slot(val):
 	if val is None:
 		return encode_short(-1)
-
-	if val.itemid < 0:
-		raise ValueError('invalid itemid')
-
-	raw = encode_short(val.itemid)
-	raw += encode_short(val.count)
-	raw += encode_short(val.damage)
-	return raw + encode_nbt(val.nbt)
+	return val.encode()
 
 def encode_bytes_eof(val):
 	return bytes(val)
