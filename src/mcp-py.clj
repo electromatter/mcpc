@@ -281,7 +281,7 @@
 (assert (> (count *command-line-args*) 1) "usage: <source filename> <roots>...")
 
 (def source (mcp/translate-file (first *command-line-args*)))
-(def orders (map symbol (rest *command-line-args*)))
+(def orders (apply mcp/order source (map symbol (rest *command-line-args*))))
 
 ; build source
 (println "import mcp_base as _mcp")

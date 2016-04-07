@@ -44,13 +44,13 @@
 	[source & names]
 	(let [counter (newcounter)]
 	(-> (reduce (fn cont [deps typename]
-		(let [typedef (get source typename)
-			deps (reduce cont deps (:depends typedef))
-			deps (reduce cont deps (:variants typedef))]
-			(if (contains? deps typename)
-				deps
-				(assoc deps typename (counter))))
-		) {} names) sorted-map-invert vals)))
+		(if (contains? deps typename)
+			deps
+			(let [typedef (get source typename)
+				deps (reduce cont deps (:depends typedef))
+				deps (reduce cont deps (:variants typedef))]
+				(assoc deps typename (counter)))))
+		{} names) sorted-map-invert vals)))
 
 ; augments the ast and flattens types
 (defmulti translate
