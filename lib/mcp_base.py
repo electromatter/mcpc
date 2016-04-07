@@ -243,7 +243,7 @@ def encode_position(val):
 	x, y, z = val
 	if not (sign_range_bits(x, 26) and sign_range_bits(y, 12) and sign_range_bits(z, 26)):
 		raise ValueError('x, y, z must be 26 bits, 12 bits, 26 bits respectively')
-	return encode_long((x & 0x3ffffff)<< | (y & 0xfff) | (z & 0x3ffffff))
+	return encode_long(((x & 0x3ffffff) << 38) | ((y & 0xfff) << 26) | (z & 0x3ffffff))
 
 def encode_nbt(val):
 	if val is None:
