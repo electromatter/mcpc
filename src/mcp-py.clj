@@ -50,7 +50,15 @@
 			(= (:action order) :field) (gen-init-field source (get (:fields typedef) (:name order)))
 			(= (:action order) :emit) (list "return")
 			:else (assert false (str "unknown action: " (:action order)))))
-			(:orders typedef)))))
+			(:orders typedef))
+		"def __repr__(_self):"
+			(if (seq fields)
+				(str "return '" (:name typedef) "("
+					(interpose ", " (map #(str % "=%r") fields))
+					")' % ("
+					(interpose ", " (map #(str "_self." %) fields))
+					")")
+				(str "return '" (:name typedef) "()'")))))
 
 (defmulti gen-value (fn [source field value] (get builtin-types (-> field :type :name))))
 (defmulti gen-encode-field (fn [source field] (get builtin-types (-> field :type :name))))
@@ -247,7 +255,7 @@
 	(mapcat (fn [order] (cond
 		(= (:action order) :field) (gen-decode-field source (get (:fields typedef) (:name order)))
 		(= (:action order) :match) (gen-decode-match source typedef order)
-		(= (:action order) :emit) (list (str "return " (:name order) "(" (reduce #(apply str (interpose ", " %&)) fields) ")"))
+		(= (:action order) :emit) (list (str "return " (:name order) "(" (reduce #(apply str (interpose ", " %&)) fields) "), _off"))
 		:else (assert false (str "unknown action: " (:action order)))))
 		branch)))
 
