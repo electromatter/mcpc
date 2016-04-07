@@ -239,7 +239,7 @@
 		field (get (:fields typedef) (:field match))]
 	(assert (> (count branches) 0) "match with no branches?")
 	(concat
-		(list "if false:"	;so we can just use elif
+		(list "if False:"	;so we can just use elif
 			(list "pass"))
 		(mapcat (fn [[value branch]]
 			(list (str"elif " (:name field) " == " (gen-value source field value) ":")
