@@ -31,12 +31,26 @@
 		(if (and (= action :field) (not-contains? (get fields field) :value))
 			field)) orders)))
 
+(declare gen-value)
+
+(defn gen-init-field
+	[source field]
+	(if (.startsWith (str (:name field)) "_")
+		nil
+		(list
+			(if (:value field)
+				(str "_self.c_" (:name field) " = " (gen-value source field (:value field)))
+				(str"_self." (:name field) " = " (:name field))))))
+
 (defn gen-init
 	[source typedef]
 	(let [fields (non-const-fields typedef)]
 	(list (str "def __init__(" (reduce #(str %1 ", " %2) "_self" fields) "):")
-		(map #(str "_self." % " = " %) fields)
-		(list "return"))))
+		(mapcat (fn [order] (cond
+			(= (:action order) :field) (gen-init-field source (get (:fields typedef) (:name order)))
+			(= (:action order) :emit) (list "return")
+			:else (assert false (str "unknown action: " (:action order)))))
+			(:orders typedef)))))
 
 (defmulti gen-value (fn [source field value] (get builtin-types (-> field :type :name))))
 (defmulti gen-encode-field (fn [source field] (get builtin-types (-> field :type :name))))
