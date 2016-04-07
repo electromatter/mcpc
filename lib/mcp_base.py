@@ -81,19 +81,19 @@ def decode_bool(raw, off=0):
 
 def decode_byte(raw, off=0):
 	raw, off = decode_raw(raw, off, 1)
-	return struct.unpack('!b', raw), off
+	return struct.unpack('!b', raw)[0], off
 
 def decode_short(raw, off=0):
 	raw, off = decode_raw(raw, off, 2)
-	return struct.unpack("!h", raw), off
+	return struct.unpack("!h", raw)[0], off
 
 def decode_int(raw, off=0):
 	raw, off = decode_raw(raw, off, 4)
-	return struct.unpack("!i", raw), off
+	return struct.unpack("!i", raw)[0], off
 
 def decode_long(raw, off=0):
 	raw, off = decode_raw(raw, off, 8)
-	return struct.unpack("!l", raw), off
+	return struct.unpack("!l", raw)[0], off
 
 def decode_uvarlong(raw, _off=0):
 	raw = raw[_off:]
@@ -116,11 +116,11 @@ def decode_varlong(raw, off=0):
 
 def decode_float(raw, off=0):
 	raw, off = decode_raw(raw, off, 4)
-	return struct.unpack("!f", raw), off
+	return struct.unpack("!f", raw)[0], off
 
 def decode_double(raw, off=0):
 	raw, off = decode_raw(raw, off, 8)
-	return struct.unpack("!d", raw), off
+	return struct.unpack("!d", raw)[0], off
 
 def decode_uuid(raw, off=0):
 	raw, off = decode_raw(raw, off, 16)
