@@ -103,7 +103,7 @@ def decode_uvarlong(raw, _off=0):
 			raise NotEnoughData()
 		val |= (raw[off] & 0x7f) << (off * 7)
 		if (raw[off] & 0x80) == 0:
-			return val, off + _off
+			return val, off + _off + 1
 	raise NoMatchError('varint too long')
 
 def decode_varint(raw, off=0):
