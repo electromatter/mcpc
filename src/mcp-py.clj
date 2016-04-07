@@ -288,7 +288,7 @@
 
 (cond
 	(= numargs 0) (println "usage: <source filename> <roots>...")
-	(= numargs 1) (do "roots: " (pprint (keys (filter (comp mcp/is-union? second) source))))
+	(= numargs 1) (do (print "roots: ") (pprint (keys (filter (comp mcp/is-union? second) source))))
 	:else (apply mcp/indent "import mcp_base as _mcp"
 				""
 				(mapcat (partial gen-code source) orders)))
