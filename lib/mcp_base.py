@@ -93,7 +93,7 @@ def decode_int(raw, off=0):
 
 def decode_long(raw, off=0):
 	raw, off = decode_raw(raw, off, 8)
-	return struct.unpack("!l", raw)[0], off
+	return struct.unpack("!q", raw)[0], off
 
 def decode_uvarlong(raw, _off=0):
 	raw = raw[_off:]
@@ -196,7 +196,7 @@ def encode_int(val):
 	return struct.pack('!i', val)
 
 def encode_long(val):
-	return struct.pack('!l', val)
+	return struct.pack('!q', val)
 
 def encode_uvarlong(val):
 	raw = bytearray(11)
