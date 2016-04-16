@@ -218,6 +218,7 @@
 		cname (or oldname newname)
 		orders `({:action :emit :name ~cname})]
 		(assert (not (and oldname newname)))
+		(assert (not (contains? (:types state) cname)))
 		(assoc state
 			:cur (assoc (:cur state)
 				:orders (concat (:orders (:cur state)) orders))
